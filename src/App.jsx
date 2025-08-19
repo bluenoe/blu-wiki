@@ -368,7 +368,7 @@ function CopyBtn({ text }) {
 function Converters() {
   const { hex, dec, bin, setHex, setDec, setBin } = useTriBaseSync();
   return (
-    <div className="grid md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       <SectionCard title="Hex → Dec/Bin" subtitle="Thập lục phân → Thập phân/Nhị phân">
         <Field label="HEX (0-9 A-F)" value={hex} onChange={setHex} placeholder="FF" monospaced right={<CopyBtn text={hex} />} />
         <div className="grid grid-cols-1 gap-3">
@@ -404,7 +404,7 @@ function TermItem({ t, onSelect }) {
         <span className="text-sm font-bold tracking-wide">{t.abbr}</span>
         <span className="text-xs text-gray-600 dark:text-gray-300">{t.en?.title}</span>
       </div>
-      <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">{t.en?.def}</div>
+      <div className="mt-1 text-sm leading-snug text-gray-600 dark:text-gray-400 line-clamp-2">{t.en?.def}</div>
       <div className="mt-2 flex flex-wrap gap-1">{(t.tags || []).map((x) => <Pill key={x}>{x}</Pill>)}</div>
     </button>
   );
@@ -422,14 +422,14 @@ function TermDetail({ t, onEdit, onDelete }) {
           <div className="mt-2 grid md:grid-cols-2 gap-4">
             <div>
               <h4 className="text-sm font-medium">English</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">{t.en?.def}</p>
+              <p className="text-[15px] md:text-base leading-relaxed text-gray-700 dark:text-gray-200 mt-1">{t.en?.def}</p>
               {t.en?.example ? (
                 <p className="text-xs text-gray-500 mt-1"><span className="font-medium">Example:</span> {t.en.example}</p>
               ) : null}
             </div>
             <div>
               <h4 className="text-sm font-medium">Tiếng Việt</h4>
-              <p className="text-sm text-gray-700 dark:text-gray-200 mt-1">{t.vi?.def}</p>
+              <p className="text-[15px] md:text-base leading-relaxed text-gray-700 dark:text-gray-200 mt-1">{t.vi?.def}</p>
               {t.vi?.example ? (
                 <p className="text-xs text-gray-500 mt-1"><span className="font-medium">Ví dụ:</span> {t.vi.example}</p>
               ) : null}
@@ -527,17 +527,28 @@ function Glossary() {
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     const arr = [...terms];
-    if (s) {
-      return arr
-        .filter((t) =>
-          [t.abbr, t.en?.title, t.en?.def, t.vi?.title, t.vi?.def]
-            .filter(Boolean)
-            .some((x) => x.toLowerCase().includes(s))
-        )
-        .sort((a, b) => a.abbr.localeCompare(b.abbr));
-    }
-    return arr.sort((a, b) => a.abbr.localeCompare(b.abbr));
-  }, [terms, q]);
+    if (!s) return arr.sort((a,b)=>a.abbr.localeCompare(b.abbr));
+    const occ = (n,h="")=>{
+      n=n.toLowerCase(); h=(h||"").toLowerCase();
+      let i=0,c=0; while((i=h.indexOf(n,i))!==-1){c++; i+=n.length;} return c;
+    };
+    const score = (t)=>{
+      const w = {exact:100,prefix:50,inAbbr:5,inTitle:3,inDef:1,inTags:2};
+      const ab=(t.abbr||"").toLowerCase();
+      let sc=0;
+      if(ab===s) sc+=w.exact;
+      if(ab.startsWith(s)) sc+=w.prefix;
+      sc+=occ(s,t.abbr)*w.inAbbr;
+      sc+=occ(s,(t.en?.title||"")+" "+(t.vi?.title||""))*w.inTitle;
+      sc+=occ(s,(t.en?.def||"")+" "+(t.vi?.def||""))*w.inDef;
+      sc+=occ(s,(t.tags||[]).join(" "))*w.inTags;
+      return sc;
+    };
+    return arr.map(t=>({t,s:score(t)}))
+      .filter(x=>x.s>0)
+      .sort((a,b)=>(b.s-a.s)||a.t.abbr.localeCompare(b.t.abbr))
+      .map(x=>x.t);
+  }, [terms,q]);
 
   return (
     <div className="grid lg:grid-cols-3 gap-4">
@@ -557,7 +568,7 @@ function Glossary() {
           }
         >
           <Field label="Search / Tìm kiếm" value={q} onChange={setQ} placeholder="IP, TCP, DNS…" />
-          <div className="mt-2 grid gap-2 max-h-[460px] overflow-auto pr-1">
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[460px] overflow-auto pr-1">
             {list.map((t) => (
               <TermItem key={t.id} t={t} onSelect={setSelected} />
             ))}

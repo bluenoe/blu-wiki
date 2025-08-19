@@ -1,12 +1,30 @@
-# React + Vite
+BluWiki
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Personal bilingual (EN–VI) wiki for IT abbreviations with handy converters (Hex ⇄ Dec ⇄ Bin).
+Offline-first, lightweight, and easy to host or run locally.
 
-Currently, two official plugins are available:
+Features
+- Glossary with add/edit/delete, tags, instant search (relevance-ranked)
+- Converters: Hex ⇄ Dec ⇄ Bin (BigInt)
+- LocalStorage persistence; Export/Import JSON
+- Responsive UI, dark-mode aware
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Tech
+- Vite + React
+- Tailwind CSS
 
-## Expanding the ESLint configuration
+Getting Started
+- npm install
+- npm run dev  # open the URL printed by Vite
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Build
+- npm run build
+
+Deploy
+- Static hosts (Vercel/Netlify/GitHub Pages) or Docker + Nginx.
+
+Backup & Restore
+- Use the Export/Import JSON buttons in the app.
+
+License
+- MIT

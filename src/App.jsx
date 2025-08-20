@@ -727,6 +727,10 @@ function useAppState() {
   const [activeTag, setActiveTag] = useState('');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('bluwiki.darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   const { fold, occ, editDistLe1 } = useEnhancedSearch();
 
@@ -734,6 +738,20 @@ function useAppState() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
   }, [terms]);
+
+  // Handle dark mode persistence and apply to document
+  useEffect(() => {
+    localStorage.setItem('bluwiki.darkMode', JSON.stringify(isDarkMode));
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(prev => !prev);
+  };
 
   // Enhanced search with relevance scoring
   const filteredTerms = useMemo(() => {
@@ -858,6 +876,8 @@ function useAppState() {
     setShowCommandPalette,
     isPrintMode,
     setIsPrintMode,
+    isDarkMode,
+    toggleDarkMode,
     terms
   };
 }
@@ -916,6 +936,10 @@ function App() {
   const [activeTag, setActiveTag] = useState('');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('bluwiki.darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   const { fold, occ, editDistLe1 } = useEnhancedSearch();
 
@@ -1090,11 +1114,13 @@ function App() {
     showCommandPalette,
     setShowCommandPalette,
     isPrintMode,
-    setIsPrintMode
+    setIsPrintMode,
+    isDarkMode,
+    toggleDarkMode
   };
 
   return (
-    <div className={`min-h-screen bg-gray-50 ${isPrintMode ? 'print-mode' : ''}`}>
+    <div className={`min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-gray-100 ${isPrintMode ? 'print-mode' : ''}`}>
       <Header appState={appState} />
       <main className="container mx-auto px-4 py-8">
         <Glossary appState={appState} />
@@ -1109,13 +1135,13 @@ function App() {
 
 // Header component
 function Header({ appState }) {
-  const { searchQuery, setSearchQuery, exportData, importData, setShowCommandPalette, isPrintMode, setIsPrintMode } = appState;
+  const { searchQuery, setSearchQuery, exportData, importData, setShowCommandPalette, isPrintMode, setIsPrintMode, isDarkMode, toggleDarkMode } = appState;
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm border-b">
+    <header className="sticky top-0 z-50 bg-white dark:bg-zinc-800 shadow-sm border-b border-gray-200 dark:border-zinc-700">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-blue-600">BluWiki</h1>
+          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">BluWiki</h1>
           
           <div className="flex-1 max-w-md">
             <input
@@ -1123,22 +1149,30 @@ function Header({ appState }) {
               placeholder="Search terms... (Press / to focus)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCommandPalette(true)}
-              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               title="Command Palette (Ctrl/⌘+K)"
             >
               ⌘K
             </button>
             
             <button
+              onClick={toggleDarkMode}
+              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              title="Toggle Dark Mode"
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+            
+            <button
               onClick={() => setIsPrintMode(!isPrintMode)}
-              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
               title="Toggle Print Mode"
             >
               🖨️
@@ -1146,13 +1180,13 @@ function Header({ appState }) {
             
             <button
               onClick={exportData}
-              className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg transition-colors"
               title="Export Data"
             >
               Export
             </button>
             
-            <label className="px-3 py-2 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors cursor-pointer">
+            <label className="px-3 py-2 text-sm bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 rounded-lg transition-colors cursor-pointer">
               Import
               <input type="file" accept=".json" onChange={importData} className="hidden" />
             </label>
@@ -1170,9 +1204,9 @@ function Footer({ terms }) {
   const lastUpdated = terms.length > 0 ? new Date(Math.max(...terms.map(t => new Date(t.createdAt || Date.now())))).toLocaleDateString() : 'Never';
 
   return (
-    <footer className="bg-gray-100 border-t mt-8">
+    <footer className="bg-gray-100 dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 mt-8">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600 dark:text-gray-400">
           <div className="flex gap-6">
             <span>{totalTerms} terms</span>
             <span>{totalTags} tags</span>
@@ -1190,19 +1224,20 @@ function Footer({ terms }) {
 
 // Command Palette component
 function CommandPalette({ appState }) {
-  const { setShowCommandPalette, setIsAddingTerm, exportData, setIsPrintMode } = appState;
+  const { setShowCommandPalette, setIsAddingTerm, exportData, setIsPrintMode, toggleDarkMode } = appState;
   
   const commands = [
     { id: 'add', label: 'Add New Term', action: () => setIsAddingTerm(true) },
     { id: 'export', label: 'Export Data', action: exportData },
     { id: 'print', label: 'Toggle Print Mode', action: () => setIsPrintMode(prev => !prev) },
+    { id: 'dark', label: 'Toggle Dark Mode', action: toggleDarkMode },
   ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Command Palette</h3>
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div className="p-4 border-b border-gray-200 dark:border-zinc-700">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Command Palette</h3>
         </div>
         <div className="p-2">
           {commands.map(cmd => (
@@ -1212,13 +1247,13 @@ function CommandPalette({ appState }) {
                 cmd.action();
                 setShowCommandPalette(false);
               }}
-              className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded transition-colors"
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-900 dark:text-gray-100 rounded transition-colors"
             >
               {cmd.label}
             </button>
           ))}
         </div>
-        <div className="p-4 border-t text-xs text-gray-500">
+        <div className="p-4 border-t border-gray-200 dark:border-zinc-700 text-xs text-gray-500 dark:text-gray-400">
           Press Escape to close
         </div>
       </div>

@@ -1401,7 +1401,6 @@ function StickyHeader({ appState, tab, setTab }) {
 export default function BluWiki() {
   const [tab, setTab] = useState("glossary");
   const appState = useAppState();
-  const { terms } = useTerms();
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900 text-zinc-900 dark:text-zinc-100">
@@ -1413,7 +1412,7 @@ export default function BluWiki() {
           {tab === "converters" && <Converters />}
         </div>
         
-        <AppFooter terms={terms} />
+        <AppFooter terms={appState.terms} />
       </div>
     </div>
   );
@@ -1422,8 +1421,18 @@ export default function BluWiki() {
 // Add missing hooks before existing functions
 function useAppState() {
   const [terms, setTerms] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : seedTerms;
+    let saved = [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch {}
+    // Merge saved terms with seedTerms (saved overrides by id; include new seeds)
+    const byId = new Map(Array.isArray(saved) ? saved.map(t => [t.id, t]) : []);
+    const merged = [
+      ...seedTerms.map(s => byId.get(s.id) || s),
+      ...saved.filter(t => !seedTerms.some(s => s.id === t.id)),
+    ];
+    return merged;
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -2077,7 +2086,7 @@ function Glossary({ appState }) {
           setVisibleCount((n) => Math.min(n + pageSize, workingTerms.length));
         }
       }
-    }, { root: null, rootMargin: '0px', threshold: 1.0 });
+    }, { root: null, rootMargin: '200px 0px', threshold: 0 });
 
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -2246,7 +2255,7 @@ function Glossary({ appState }) {
               >
                 Load more
               </button>
-              <div ref={sentinelRef} className="h-1 w-1 opacity-0" />
+              <div ref={sentinelRef} className="h-8 w-full opacity-0" />
             </>
           ) : (
             <div className="text-xs text-gray-500 dark:text-gray-400">End of results</div>

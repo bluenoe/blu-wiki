@@ -198,6 +198,711 @@ const seedTerms = [
     },
     tags: ["math", "number-base"],
   },
+  {
+    id: "nat",
+    abbr: "NAT",
+    en: {
+      title: "Network Address Translation",
+      def: "Technique that maps private IP addresses to public ones, allowing multiple devices to share a single public IP.",
+      example: "Your home router uses NAT to allow all devices to access the internet through one public IP.",
+    },
+    vi: {
+      title: "Dịch địa chỉ mạng",
+      def: "Kỹ thuật ánh xạ địa chỉ IP riêng tư sang công cộng, cho phép nhiều thiết bị dùng chung một IP công cộng.",
+      example: "Router gia đình dùng NAT để tất cả thiết bị truy cập internet qua một IP công cộng.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "vpn",
+    abbr: "VPN",
+    en: {
+      title: "Virtual Private Network",
+      def: "Secure tunnel over public networks that encrypts traffic and masks user location.",
+      example: "Using VPN to securely access company resources from home.",
+    },
+    vi: {
+      title: "Mạng riêng ảo",
+      def: "Đường hầm bảo mật qua mạng công cộng, mã hóa lưu lượng và che giấu vị trí người dùng.",
+      example: "Dùng VPN để truy cập tài nguyên công ty từ nhà một cách an toàn.",
+    },
+    tags: ["network", "security"],
+  },
+  {
+    id: "vlan",
+    abbr: "VLAN",
+    en: {
+      title: "Virtual LAN",
+      def: "Logical segmentation of a physical network to create separate broadcast domains.",
+      example: "Separating guest WiFi from corporate network using VLANs.",
+    },
+    vi: {
+      title: "Mạng LAN ảo",
+      def: "Phân đoạn logic của mạng vật lý để tạo các miền quảng bá riêng biệt.",
+      example: "Tách WiFi khách với mạng công ty bằng VLAN.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "wan",
+    abbr: "WAN",
+    en: {
+      title: "Wide Area Network",
+      def: "Network spanning large geographical areas, connecting multiple LANs across cities or countries.",
+      example: "The Internet is the largest WAN connecting networks worldwide.",
+    },
+    vi: {
+      title: "Mạng diện rộng",
+      def: "Mạng trải rộng trên khu vực địa lý lớn, kết nối nhiều LAN qua các thành phố hoặc quốc gia.",
+      example: "Internet là WAN lớn nhất kết nối các mạng trên toàn thế giới.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "man",
+    abbr: "MAN",
+    en: {
+      title: "Metropolitan Area Network",
+      def: "Network covering a city or metropolitan area, larger than LAN but smaller than WAN.",
+      example: "City-wide fiber network connecting government buildings.",
+    },
+    vi: {
+      title: "Mạng đô thị",
+      def: "Mạng bao phủ một thành phố hoặc khu vực đô thị, lớn hơn LAN nhưng nhỏ hơn WAN.",
+      example: "Mạng cáp quang toàn thành phố kết nối các tòa nhà chính phủ.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "isp",
+    abbr: "ISP",
+    en: {
+      title: "Internet Service Provider",
+      def: "Company that provides internet access to customers through various technologies.",
+      example: "Comcast, Verizon are major ISPs in the US.",
+    },
+    vi: {
+      title: "Nhà cung cấp dịch vụ Internet",
+      def: "Công ty cung cấp truy cập internet cho khách hàng thông qua các công nghệ khác nhau.",
+      example: "FPT, Viettel là các ISP lớn tại Việt Nam.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "mac",
+    abbr: "MAC",
+    en: {
+      title: "Media Access Control",
+      def: "Unique hardware identifier assigned to network interfaces, used in data link layer.",
+      example: "MAC address: 00:1B:44:11:3A:B7 identifies a specific network card.",
+    },
+    vi: {
+      title: "Điều khiển truy cập phương tiện",
+      def: "Định danh phần cứng duy nhất gán cho giao diện mạng, dùng ở tầng liên kết dữ liệu.",
+      example: "Địa chỉ MAC: 00:1B:44:11:3A:B7 xác định một card mạng cụ thể.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "arp",
+    abbr: "ARP",
+    en: {
+      title: "Address Resolution Protocol",
+      def: "Protocol that maps IP addresses to MAC addresses in local networks.",
+      example: "ARP table shows which MAC address corresponds to IP 192.168.1.1.",
+    },
+    vi: {
+      title: "Giao thức phân giải địa chỉ",
+      def: "Giao thức ánh xạ địa chỉ IP sang địa chỉ MAC trong mạng cục bộ.",
+      example: "Bảng ARP hiển thị địa chỉ MAC nào tương ứng với IP 192.168.1.1.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "icmp",
+    abbr: "ICMP",
+    en: {
+      title: "Internet Control Message Protocol",
+      def: "Protocol for sending error messages and operational information in IP networks.",
+      example: "Ping command uses ICMP to test network connectivity.",
+    },
+    vi: {
+      title: "Giao thức thông báo điều khiển Internet",
+      def: "Giao thức gửi thông báo lỗi và thông tin vận hành trong mạng IP.",
+      example: "Lệnh ping dùng ICMP để kiểm tra kết nối mạng.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "bgp",
+    abbr: "BGP",
+    en: {
+      title: "Border Gateway Protocol",
+      def: "Routing protocol used between autonomous systems on the Internet.",
+      example: "ISPs use BGP to exchange routing information globally.",
+    },
+    vi: {
+      title: "Giao thức cổng biên",
+      def: "Giao thức định tuyến dùng giữa các hệ thống tự trị trên Internet.",
+      example: "Các ISP dùng BGP để trao đổi thông tin định tuyến toàn cầu.",
+    },
+    tags: ["network", "routing"],
+  },
+  {
+    id: "ospf",
+    abbr: "OSPF",
+    en: {
+      title: "Open Shortest Path First",
+      def: "Link-state routing protocol that uses Dijkstra's algorithm to find shortest paths.",
+      example: "Enterprise networks use OSPF for fast convergence and loop-free routing.",
+    },
+    vi: {
+      title: "Đường đi ngắn nhất mở đầu tiên",
+      def: "Giao thức định tuyến trạng thái liên kết dùng thuật toán Dijkstra tìm đường ngắn nhất.",
+      example: "Mạng doanh nghiệp dùng OSPF để hội tụ nhanh và định tuyến không vòng lặp.",
+    },
+    tags: ["network", "routing"],
+  },
+  {
+    id: "rip",
+    abbr: "RIP",
+    en: {
+      title: "Routing Information Protocol",
+      def: "Distance-vector routing protocol that uses hop count as routing metric.",
+      example: "RIP limits networks to 15 hops to prevent routing loops.",
+    },
+    vi: {
+      title: "Giao thức thông tin định tuyến",
+      def: "Giao thức định tuyến vector khoảng cách dùng số bước nhảy làm thước đo định tuyến.",
+      example: "RIP giới hạn mạng tối đa 15 bước nhảy để tránh vòng lặp định tuyến.",
+    },
+    tags: ["network", "routing"],
+  },
+  {
+    id: "cdn",
+    abbr: "CDN",
+    en: {
+      title: "Content Delivery Network",
+      def: "Distributed network of servers that deliver web content based on user location.",
+      example: "Netflix uses CDN to stream videos from servers closest to viewers.",
+    },
+    vi: {
+      title: "Mạng phân phối nội dung",
+      def: "Mạng máy chủ phân tán cung cấp nội dung web dựa trên vị trí người dùng.",
+      example: "Netflix dùng CDN để phát video từ máy chủ gần người xem nhất.",
+    },
+    tags: ["network", "web"],
+  },
+  {
+    id: "voip",
+    abbr: "VoIP",
+    en: {
+      title: "Voice over IP",
+      def: "Technology for voice communication over Internet Protocol networks.",
+      example: "Skype and WhatsApp calls use VoIP technology.",
+    },
+    vi: {
+      title: "Thoại qua IP",
+      def: "Công nghệ truyền thoại qua mạng giao thức Internet.",
+      example: "Cuộc gọi Skype và WhatsApp dùng công nghệ VoIP.",
+    },
+    tags: ["network", "communication"],
+  },
+  {
+    id: "qos",
+    abbr: "QoS",
+    en: {
+      title: "Quality of Service",
+      def: "Network management technique to prioritize certain types of traffic.",
+      example: "QoS ensures video calls get priority over file downloads.",
+    },
+    vi: {
+      title: "Chất lượng dịch vụ",
+      def: "Kỹ thuật quản lý mạng để ưu tiên các loại lưu lượng nhất định.",
+      example: "QoS đảm bảo cuộc gọi video được ưu tiên hơn tải file.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "ids",
+    abbr: "IDS",
+    en: {
+      title: "Intrusion Detection System",
+      def: "Security system that monitors network traffic for suspicious activities.",
+      example: "IDS alerts administrators when detecting potential cyber attacks.",
+    },
+    vi: {
+      title: "Hệ thống phát hiện xâm nhập",
+      def: "Hệ thống bảo mật giám sát lưu lượng mạng tìm hoạt động đáng ngờ.",
+      example: "IDS cảnh báo quản trị viên khi phát hiện tấn công mạng tiềm ẩn.",
+    },
+    tags: ["security"],
+  },
+  {
+    id: "ips",
+    abbr: "IPS",
+    en: {
+      title: "Intrusion Prevention System",
+      def: "Security system that actively blocks detected threats in real-time.",
+      example: "IPS automatically drops malicious packets before they reach targets.",
+    },
+    vi: {
+      title: "Hệ thống ngăn chặn xâm nhập",
+      def: "Hệ thống bảo mật chủ động chặn các mối đe dọa được phát hiện theo thời gian thực.",
+      example: "IPS tự động loại bỏ gói tin độc hại trước khi chúng đến đích.",
+    },
+    tags: ["security"],
+  },
+  {
+    id: "mfa",
+    abbr: "MFA",
+    en: {
+      title: "Multi-Factor Authentication",
+      def: "Security method requiring multiple verification factors to access accounts.",
+      example: "Banking apps use MFA with password + SMS code + fingerprint.",
+    },
+    vi: {
+      title: "Xác thực đa yếu tố",
+      def: "Phương pháp bảo mật yêu cầu nhiều yếu tố xác minh để truy cập tài khoản.",
+      example: "Ứng dụng ngân hàng dùng MFA với mật khẩu + mã SMS + vân tay.",
+    },
+    tags: ["security"],
+  },
+  {
+    id: "pki",
+    abbr: "PKI",
+    en: {
+      title: "Public Key Infrastructure",
+      def: "Framework for managing digital certificates and public-key encryption.",
+      example: "PKI enables secure HTTPS connections through certificate authorities.",
+    },
+    vi: {
+      title: "Hạ tầng khóa công khai",
+      def: "Khung quản lý chứng chỉ số và mã hóa khóa công khai.",
+      example: "PKI cho phép kết nối HTTPS an toàn thông qua cơ quan chứng chỉ.",
+    },
+    tags: ["security", "encryption"],
+  },
+  {
+    id: "aes",
+    abbr: "AES",
+    en: {
+      title: "Advanced Encryption Standard",
+      def: "Symmetric encryption algorithm widely used for securing sensitive data.",
+      example: "AES-256 encryption protects files, WiFi, and online transactions.",
+    },
+    vi: {
+      title: "Tiêu chuẩn mã hóa nâng cao",
+      def: "Thuật toán mã hóa đối xứng được dùng rộng rãi để bảo mật dữ liệu nhạy cảm.",
+      example: "Mã hóa AES-256 bảo vệ file, WiFi và giao dịch trực tuyến.",
+    },
+    tags: ["security", "encryption"],
+  },
+  {
+    id: "rsa",
+    abbr: "RSA",
+    en: {
+      title: "Rivest–Shamir–Adleman (encryption)",
+      def: "Public-key cryptosystem widely used for secure data transmission.",
+      example: "RSA encryption secures online banking and email communications.",
+    },
+    vi: {
+      title: "Rivest–Shamir–Adleman (mã hóa)",
+      def: "Hệ mã hóa khóa công khai được dùng rộng rãi cho truyền dữ liệu an toàn.",
+      example: "Mã hóa RSA bảo mật ngân hàng trực tuyến và email.",
+    },
+    tags: ["security", "encryption"],
+  },
+  {
+    id: "md5",
+    abbr: "MD5",
+    en: {
+      title: "Message Digest 5",
+      def: "Cryptographic hash function producing 128-bit hash values, now considered weak.",
+      example: "MD5 checksums verify file integrity but shouldn't be used for security.",
+    },
+    vi: {
+      title: "Thông điệp tóm tắt 5",
+      def: "Hàm băm mật mã tạo giá trị băm 128-bit, hiện được coi là yếu.",
+      example: "Checksum MD5 xác minh tính toàn vẹn file nhưng không nên dùng cho bảo mật.",
+    },
+    tags: ["security", "hash"],
+  },
+  {
+    id: "sha",
+    abbr: "SHA",
+    en: {
+      title: "Secure Hash Algorithm",
+      def: "Family of cryptographic hash functions including SHA-1, SHA-256, SHA-512.",
+      example: "SHA-256 is used in Bitcoin blockchain for proof-of-work.",
+    },
+    vi: {
+      title: "Thuật toán băm an toàn",
+      def: "Họ hàm băm mật mã bao gồm SHA-1, SHA-256, SHA-512.",
+      example: "SHA-256 được dùng trong blockchain Bitcoin cho proof-of-work.",
+    },
+    tags: ["security", "hash"],
+  },
+  {
+    id: "jwt",
+    abbr: "JWT",
+    en: {
+      title: "JSON Web Token",
+      def: "Compact token format for securely transmitting information between parties.",
+      example: "JWT tokens authenticate users in modern web applications.",
+    },
+    vi: {
+      title: "Token web JSON",
+      def: "Định dạng token nhỏ gọn để truyền thông tin an toàn giữa các bên.",
+      example: "Token JWT xác thực người dùng trong ứng dụng web hiện đại.",
+    },
+    tags: ["web", "security"],
+  },
+  {
+    id: "cors",
+    abbr: "CORS",
+    en: {
+      title: "Cross-Origin Resource Sharing",
+      def: "Mechanism allowing web pages to access resources from different domains.",
+      example: "CORS headers enable API calls from frontend to backend on different ports.",
+    },
+    vi: {
+      title: "Chia sẻ tài nguyên cross-origin",
+      def: "Cơ chế cho phép trang web truy cập tài nguyên từ các domain khác.",
+      example: "Header CORS cho phép gọi API từ frontend đến backend trên port khác.",
+    },
+    tags: ["web"],
+  },
+  {
+    id: "rest",
+    abbr: "REST",
+    en: {
+      title: "Representational State Transfer",
+      def: "Architectural style for designing networked applications using HTTP methods.",
+      example: "REST APIs use GET, POST, PUT, DELETE for resource operations.",
+    },
+    vi: {
+      title: "Chuyển trạng thái đại diện",
+      def: "Kiểu kiến trúc thiết kế ứng dụng mạng dùng phương thức HTTP.",
+      example: "API REST dùng GET, POST, PUT, DELETE cho thao tác tài nguyên.",
+    },
+    tags: ["web", "api"],
+  },
+  {
+    id: "soap",
+    abbr: "SOAP",
+    en: {
+      title: "Simple Object Access Protocol",
+      def: "Protocol for exchanging structured information in web services using XML.",
+      example: "Enterprise systems often use SOAP for reliable web service communication.",
+    },
+    vi: {
+      title: "Giao thức truy cập đối tượng đơn giản",
+      def: "Giao thức trao đổi thông tin có cấu trúc trong web service dùng XML.",
+      example: "Hệ thống doanh nghiệp thường dùng SOAP cho giao tiếp web service đáng tin cậy.",
+    },
+    tags: ["web", "api"],
+  },
+  {
+    id: "orm",
+    abbr: "ORM",
+    en: {
+      title: "Object-Relational Mapping",
+      def: "Programming technique for converting data between incompatible type systems.",
+      example: "Django ORM allows Python objects to interact with SQL databases.",
+    },
+    vi: {
+      title: "Ánh xạ đối tượng-quan hệ",
+      def: "Kỹ thuật lập trình chuyển đổi dữ liệu giữa các hệ thống kiểu không tương thích.",
+      example: "Django ORM cho phép đối tượng Python tương tác với cơ sở dữ liệu SQL.",
+    },
+    tags: ["database", "programming"],
+  },
+  {
+    id: "crud",
+    abbr: "CRUD",
+    en: {
+      title: "Create, Read, Update, Delete",
+      def: "Four basic operations for persistent storage in database applications.",
+      example: "User management systems implement CRUD operations for user accounts.",
+    },
+    vi: {
+      title: "Tạo, Đọc, Cập nhật, Xóa",
+      def: "Bốn thao tác cơ bản cho lưu trữ bền vững trong ứng dụng cơ sở dữ liệu.",
+      example: "Hệ thống quản lý người dùng thực hiện thao tác CRUD cho tài khoản.",
+    },
+    tags: ["database", "programming"],
+  },
+  {
+    id: "cicd",
+    abbr: "CI/CD",
+    en: {
+      title: "Continuous Integration / Continuous Deployment",
+      def: "Development practice of frequent code integration and automated deployment.",
+      example: "GitHub Actions enables CI/CD pipelines for automated testing and deployment.",
+    },
+    vi: {
+      title: "Tích hợp liên tục / Triển khai liên tục",
+      def: "Thực hành phát triển tích hợp code thường xuyên và triển khai tự động.",
+      example: "GitHub Actions cho phép pipeline CI/CD để test và triển khai tự động.",
+    },
+    tags: ["development"],
+  },
+  {
+    id: "dnssec",
+    abbr: "DNSSEC",
+    en: {
+      title: "DNS Security Extensions",
+      def: "Security extensions to DNS that provide authentication and data integrity.",
+      example: "DNSSEC prevents DNS spoofing attacks by cryptographically signing DNS records.",
+    },
+    vi: {
+      title: "Phần mở rộng bảo mật DNS",
+      def: "Phần mở rộng bảo mật cho DNS cung cấp xác thực và tính toàn vẹn dữ liệu.",
+      example: "DNSSEC ngăn tấn công giả mạo DNS bằng ký số các bản ghi DNS.",
+    },
+    tags: ["network", "security"],
+  },
+  {
+    id: "dhcpv6",
+    abbr: "DHCPv6",
+    en: {
+      title: "Dynamic Host Configuration Protocol for IPv6",
+      def: "Network service that automatically assigns IPv6 addresses and configuration.",
+      example: "DHCPv6 distributes IPv6 addresses and DNS servers to network devices.",
+    },
+    vi: {
+      title: "Giao thức cấu hình host động cho IPv6",
+      def: "Dịch vụ mạng tự động gán địa chỉ IPv6 và cấu hình.",
+      example: "DHCPv6 phân phối địa chỉ IPv6 và máy chủ DNS cho thiết bị mạng.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "ipv6",
+    abbr: "IPv6",
+    en: {
+      title: "Internet Protocol version 6",
+      def: "Latest version of Internet Protocol with 128-bit addresses for expanded address space.",
+      example: "IPv6 address: 2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+    },
+    vi: {
+      title: "Giao thức Internet phiên bản 6",
+      def: "Phiên bản mới nhất của giao thức Internet với địa chỉ 128-bit cho không gian địa chỉ mở rộng.",
+      example: "Địa chỉ IPv6: 2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "ssl",
+    abbr: "SSL",
+    en: {
+      title: "Secure Sockets Layer",
+      def: "Deprecated cryptographic protocol for secure communication, replaced by TLS.",
+      example: "SSL certificates enable HTTPS connections for secure web browsing.",
+    },
+    vi: {
+      title: "Lớp socket an toàn",
+      def: "Giao thức mật mã đã lỗi thời cho giao tiếp an toàn, được thay thế bởi TLS.",
+      example: "Chứng chỉ SSL cho phép kết nối HTTPS để duyệt web an toàn.",
+    },
+    tags: ["security", "web"],
+  },
+  {
+    id: "tls",
+    abbr: "TLS",
+    en: {
+      title: "Transport Layer Security",
+      def: "Cryptographic protocol providing secure communication over computer networks.",
+      example: "TLS 1.3 encrypts HTTPS traffic between browsers and web servers.",
+    },
+    vi: {
+      title: "Bảo mật tầng vận chuyển",
+      def: "Giao thức mật mã cung cấp giao tiếp an toàn qua mạng máy tính.",
+      example: "TLS 1.3 mã hóa lưu lượng HTTPS giữa trình duyệt và máy chủ web.",
+    },
+    tags: ["security", "web"],
+  },
+  {
+    id: "waf",
+    abbr: "WAF",
+    en: {
+      title: "Web Application Firewall",
+      def: "Security system that filters and monitors HTTP traffic to web applications.",
+      example: "WAF blocks SQL injection and XSS attacks on web applications.",
+    },
+    vi: {
+      title: "Tường lửa ứng dụng web",
+      def: "Hệ thống bảo mật lọc và giám sát lưu lượng HTTP đến ứng dụng web.",
+      example: "WAF chặn tấn công SQL injection và XSS trên ứng dụng web.",
+    },
+    tags: ["security", "web"],
+  },
+  {
+    id: "siem",
+    abbr: "SIEM",
+    en: {
+      title: "Security Information and Event Management",
+      def: "Security management approach combining security information and event management.",
+      example: "SIEM systems collect and analyze security logs from multiple sources.",
+    },
+    vi: {
+      title: "Quản lý thông tin và sự kiện bảo mật",
+      def: "Phương pháp quản lý bảo mật kết hợp thông tin bảo mật và quản lý sự kiện.",
+      example: "Hệ thống SIEM thu thập và phân tích log bảo mật từ nhiều nguồn.",
+    },
+    tags: ["security"],
+  },
+  {
+    id: "soc",
+    abbr: "SOC",
+    en: {
+      title: "Security Operations Center",
+      def: "Centralized facility for monitoring, detecting, and responding to security threats.",
+      example: "SOC analysts monitor network traffic 24/7 for cyber threats.",
+    },
+    vi: {
+      title: "Trung tâm vận hành bảo mật",
+      def: "Cơ sở tập trung để giám sát, phát hiện và ứng phó với các mối đe dọa bảo mật.",
+      example: "Chuyên viên SOC giám sát lưu lượng mạng 24/7 tìm mối đe dọa mạng.",
+    },
+    tags: ["security"],
+  },
+  {
+    id: "osi",
+    abbr: "OSI",
+    en: {
+      title: "Open Systems Interconnection",
+      def: "Seven-layer model describing network communication protocols and functions.",
+      example: "OSI layers: Physical, Data Link, Network, Transport, Session, Presentation, Application.",
+    },
+    vi: {
+      title: "Kết nối hệ thống mở",
+      def: "Mô hình bảy tầng mô tả các giao thức và chức năng giao tiếp mạng.",
+      example: "Các tầng OSI: Vật lý, Liên kết dữ liệu, Mạng, Vận chuyển, Phiên, Trình bày, Ứng dụng.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "tcpip",
+    abbr: "TCP/IP",
+    en: {
+      title: "Transmission Control Protocol / Internet Protocol",
+      def: "Suite of communication protocols used for interconnecting network devices.",
+      example: "TCP/IP is the foundation protocol suite of the modern Internet.",
+    },
+    vi: {
+      title: "Giao thức điều khiển truyền / Giao thức Internet",
+      def: "Bộ giao thức giao tiếp dùng để kết nối các thiết bị mạng.",
+      example: "TCP/IP là bộ giao thức nền tảng của Internet hiện đại.",
+    },
+    tags: ["network"],
+  },
+  {
+    id: "ftps",
+    abbr: "FTPS",
+    en: {
+      title: "File Transfer Protocol Secure",
+      def: "Extension of FTP that adds support for TLS and SSL cryptographic protocols.",
+      example: "FTPS encrypts file transfers using SSL/TLS for secure data transmission.",
+    },
+    vi: {
+      title: "Giao thức truyền file an toàn",
+      def: "Phần mở rộng của FTP thêm hỗ trợ cho các giao thức mật mã TLS và SSL.",
+      example: "FTPS mã hóa truyền file dùng SSL/TLS để truyền dữ liệu an toàn.",
+    },
+    tags: ["network", "security"],
+  },
+  {
+    id: "smtp",
+    abbr: "SMTP",
+    en: {
+      title: "Simple Mail Transfer Protocol",
+      def: "Internet standard for email transmission between mail servers.",
+      example: "Email clients use SMTP to send messages through mail servers.",
+    },
+    vi: {
+      title: "Giao thức truyền thư đơn giản",
+      def: "Tiêu chuẩn Internet cho truyền email giữa các máy chủ thư.",
+      example: "Ứng dụng email dùng SMTP để gửi tin nhắn qua máy chủ thư.",
+    },
+    tags: ["network", "email"],
+  },
+  {
+    id: "imap",
+    abbr: "IMAP",
+    en: {
+      title: "Internet Message Access Protocol",
+      def: "Protocol for accessing and managing email messages stored on a mail server.",
+      example: "IMAP allows multiple devices to sync the same email account.",
+    },
+    vi: {
+      title: "Giao thức truy cập thông điệp Internet",
+      def: "Giao thức truy cập và quản lý email được lưu trên máy chủ thư.",
+      example: "IMAP cho phép nhiều thiết bị đồng bộ cùng một tài khoản email.",
+    },
+    tags: ["network", "email"],
+  },
+  {
+    id: "pop3",
+    abbr: "POP3",
+    en: {
+      title: "Post Office Protocol v3",
+      def: "Protocol for retrieving email from a mail server to a local email client.",
+      example: "POP3 downloads emails to local storage and typically removes them from server.",
+    },
+    vi: {
+      title: "Giao thức bưu điện phiên bản 3",
+      def: "Giao thức lấy email từ máy chủ thư về ứng dụng email cục bộ.",
+      example: "POP3 tải email về lưu trữ cục bộ và thường xóa khỏi máy chủ.",
+    },
+    tags: ["network", "email"],
+  },
+  {
+    id: "json",
+    abbr: "JSON",
+    en: {
+      title: "JavaScript Object Notation",
+      def: "Lightweight data interchange format that is easy for humans to read and write.",
+      example: "REST APIs commonly use JSON format for request and response data.",
+    },
+    vi: {
+      title: "Ký hiệu đối tượng JavaScript",
+      def: "Định dạng trao đổi dữ liệu nhẹ, dễ đọc và viết cho con người.",
+      example: "API REST thường dùng định dạng JSON cho dữ liệu request và response.",
+    },
+    tags: ["data", "web"],
+  },
+  {
+    id: "xml",
+    abbr: "XML",
+    en: {
+      title: "eXtensible Markup Language",
+      def: "Markup language for encoding documents in human and machine-readable format.",
+      example: "XML is used for configuration files, web services, and data exchange.",
+    },
+    vi: {
+      title: "Ngôn ngữ đánh dấu mở rộng",
+      def: "Ngôn ngữ đánh dấu để mã hóa tài liệu ở định dạng con người và máy đọc được.",
+      example: "XML được dùng cho file cấu hình, web service và trao đổi dữ liệu.",
+    },
+    tags: ["data", "web"],
+  },
+  {
+    id: "yaml",
+    abbr: "YAML",
+    en: {
+      title: "YAML Ain't Markup Language",
+      def: "Human-readable data serialization standard often used for configuration files.",
+      example: "Docker Compose and Kubernetes use YAML for configuration files.",
+    },
+    vi: {
+      title: "YAML không phải ngôn ngữ đánh dấu",
+      def: "Tiêu chuẩn tuần tự hóa dữ liệu con người đọc được, thường dùng cho file cấu hình.",
+      example: "Docker Compose và Kubernetes dùng YAML cho file cấu hình.",
+    },
+    tags: ["data", "configuration"],
+  },
 ];
 
 function useLocalStorageState(key, initial) {

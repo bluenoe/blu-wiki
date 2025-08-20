@@ -1,1 +1,108 @@
 @import "tailwindcss";
+
+/* Custom utility classes */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Print styles */
+@media print {
+  .print-mode,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Hide interactive elements when printing */
+  header,
+  footer,
+  button,
+  input,
+  .command-palette,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  /* Show only content */
+  main {
+    margin: 0 !important;
+    padding: 20px !important;
+    max-width: none !important;
+  }
+
+  /* Optimize typography for print */
+  .term-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure proper page breaks */
+  .terms-grid {
+    display: block !important;
+  }
+
+  .terms-grid > * {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 15px;
+  }
+
+  /* Black and white color scheme */
+  * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Print-specific typography */
+  h1, h2, h3 {
+    color: black !important;
+    font-weight: bold;
+  }
+
+  .tag {
+    border: 1px solid #666 !important;
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* Print mode class for manual print optimization */
+.print-mode {
+  background: white !important;
+}
+
+.print-mode header,
+.print-mode footer,
+.print-mode button:not(.print-toggle) {
+  display: none !important;
+}
+
+.print-mode main {
+  padding-top: 0 !important;
+}
+
+/* Responsive grid improvements */
+@media (max-width: 640px) {
+  .terms-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .terms-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .terms-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}

@@ -2017,6 +2017,85 @@ function Glossary({ appState }) {
     setIsAddingTerm 
   } = appState;
 
+  // Local UI state for large-list UX
+  const [viewMode, setViewMode] = useState('infinite'); // 'infinite' | 'pagination'
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(24);
+  const [visibleCount, setVisibleCount] = useState(48); // for infinite mode
+  const [alpha, setAlpha] = useState('All'); // 'All' | 'A'..'Z' | '#'
+  const [sortBy, setSortBy] = useState('abbr'); // 'abbr' | 'en' | 'vi'
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+
+  const sentinelRef = useRef(null);
+
+  // Derive working terms with alpha filter and sorting
+  const workingTerms = useMemo(() => {
+    // Alpha filter helper
+    const passesAlpha = (t) => {
+      if (alpha === 'All') return true;
+      const raw = (t.abbr || t.en?.title || t.vi?.title || '').trim();
+      const first = raw.charAt(0).toUpperCase();
+      if (alpha === '#') {
+        return !(/[A-Z]/.test(first));
+      }
+      return first === alpha;
+    };
+
+    // Sort key helper
+    const getKey = (t) => {
+      if (sortBy === 'abbr') return (t.abbr || '').toLowerCase();
+      if (sortBy === 'en') return (t.en?.title || '').toLowerCase();
+      if (sortBy === 'vi') return (t.vi?.title || '').toLowerCase();
+      return (t.abbr || '').toLowerCase();
+    };
+
+    const items = filteredTerms.filter(passesAlpha).slice().sort((a, b) => {
+      const ka = getKey(a);
+      const kb = getKey(b);
+      if (ka < kb) return sortDir === 'asc' ? -1 : 1;
+      if (ka > kb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return items;
+  }, [filteredTerms, alpha, sortBy, sortDir]);
+
+  // Reset pagination/infinite scrolling when query, tag, alpha change
+  useEffect(() => {
+    setPage(0);
+    setVisibleCount(48);
+  }, [searchQuery, activeTag, alpha]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    if (viewMode !== 'infinite') return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          setVisibleCount((n) => Math.min(n + pageSize, workingTerms.length));
+        }
+      }
+    }, { root: null, rootMargin: '0px', threshold: 1.0 });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [viewMode, pageSize, workingTerms.length]);
+
+  const total = workingTerms.length;
+  const showing = viewMode === 'infinite' ? Math.min(visibleCount, total) : Math.min(total, pageSize);
+
+  // Compute items to render based on mode
+  const itemsToRender = useMemo(() => {
+    if (viewMode === 'infinite') {
+      return workingTerms.slice(0, visibleCount);
+    } else {
+      const start = page * pageSize;
+      return workingTerms.slice(start, start + pageSize);
+    }
+  }, [viewMode, workingTerms, visibleCount, page, pageSize]);
+
   if (filteredTerms.length === 0 && searchQuery.trim()) {
     return (
       <div className="text-center py-12">
@@ -2033,36 +2112,117 @@ function Glossary({ appState }) {
     );
   }
 
+  const letters = ['All', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''), '#'];
+
   return (
     <div className="space-y-6">
-      {/* Tag Filter */}
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setActiveTag('')}
-            className={`px-3 py-1 rounded-full text-sm transition-colors ${
-              !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
-            }`}
-          >
-            All
-          </button>
-          {allTags.map(tag => (
-            <button
-              key={tag}
-              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
-              }`}
+      {/* Controls Row */}
+      <div className="flex flex-col gap-3">
+        {/* Counts + Modes */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Showing {itemsToRender.length} of {total} result{total !== 1 ? 's' : ''}
+            {activeTag && (
+              <span className="ml-2">in tag <span className="px-2 py-0.5 bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-gray-200 rounded">{activeTag}</span></span>
+            )}
+            {searchQuery && (
+              <span className="ml-2">for "{searchQuery}"</span>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode */}
+            <div className="inline-flex rounded-lg overflow-hidden border border-gray-200 dark:border-zinc-700">
+              <button
+                onClick={() => setViewMode('infinite')}
+                className={`px-3 py-1.5 text-sm ${viewMode === 'infinite' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300'}`}
+              >
+                Infinite
+              </button>
+              <button
+                onClick={() => setViewMode('pagination')}
+                className={`px-3 py-1.5 text-sm ${viewMode === 'pagination' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300'}`}
+              >
+                Pages
+              </button>
+            </div>
+
+            {/* Page size */}
+            <label className="text-sm text-gray-600 dark:text-gray-400">Page size</label>
+            <select
+              value={pageSize}
+              onChange={(e) => { const n = parseInt(e.target.value, 10); setPageSize(n); setVisibleCount(Math.max(48, n)); setPage(0); }}
+              className="text-sm px-2 py-1 rounded border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200"
             >
-              {tag}
+              {[12, 24, 36, 48, 60, 96].map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+
+            {/* Sorting */}
+            <label className="text-sm text-gray-600 dark:text-gray-400">Sort</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="text-sm px-2 py-1 rounded border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200"
+            >
+              <option value="abbr">Abbreviation</option>
+              <option value="en">English title</option>
+              <option value="vi">Vietnamese title</option>
+            </select>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value)}
+              className="text-sm px-2 py-1 rounded border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-800 dark:text-gray-200"
+            >
+              <option value="asc">Asc</option>
+              <option value="desc">Desc</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Alpha Navigation */}
+        <div className="flex flex-wrap gap-1">
+          {letters.map((ch) => (
+            <button
+              key={ch}
+              onClick={() => setAlpha(ch)}
+              className={`px-2 py-1 text-xs rounded ${alpha === ch ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'}`}
+            >
+              {ch}
             </button>
           ))}
         </div>
-      )}
+
+        {/* Tag Filter */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActiveTag('')}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
+              }`}
+            >
+              All
+            </button>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Terms Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTerms.map(term => (
+        {itemsToRender.map(term => (
           <TermCard
             key={term.id}
             term={term}
@@ -2074,6 +2234,70 @@ function Glossary({ appState }) {
           />
         ))}
       </div>
+
+      {/* Load more / sentinel for infinite */}
+      {viewMode === 'infinite' && (
+        <div className="flex items-center justify-center">
+          {visibleCount < total ? (
+            <>
+              <button
+                onClick={() => setVisibleCount((n) => Math.min(n + pageSize, total))}
+                className="px-4 py-2 bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-zinc-600"
+              >
+                Load more
+              </button>
+              <div ref={sentinelRef} className="h-1 w-1 opacity-0" />
+            </>
+          ) : (
+            <div className="text-xs text-gray-500 dark:text-gray-400">End of results</div>
+          )}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {viewMode === 'pagination' && total > 0 && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Page {page + 1} of {Math.max(1, Math.ceil(total / pageSize))}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
+              className="px-3 py-1.5 text-sm rounded bg-gray-200 dark:bg-zinc-700 disabled:opacity-50 text-gray-800 dark:text-gray-200"
+            >
+              Prev
+            </button>
+            {(() => {
+              const pageCount = Math.ceil(total / pageSize);
+              const maxButtons = 7;
+              let start = Math.max(0, page - Math.floor(maxButtons / 2));
+              let end = Math.min(pageCount - 1, start + maxButtons - 1);
+              start = Math.max(0, end - maxButtons + 1);
+              const btns = [];
+              for (let i = start; i <= end; i++) {
+                btns.push(
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    className={`px-3 py-1.5 text-sm rounded ${i === page ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200'}`}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              }
+              return btns;
+            })()}
+            <button
+              onClick={() => setPage((p) => Math.min(Math.ceil(total / pageSize) - 1, p + 1))}
+              disabled={page >= Math.ceil(total / pageSize) - 1}
+              className="px-3 py-1.5 text-sm rounded bg-gray-200 dark:bg-zinc-700 disabled:opacity-50 text-gray-800 dark:text-gray-200"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

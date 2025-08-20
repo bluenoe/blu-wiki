@@ -331,7 +331,7 @@ function SectionCard({ title, subtitle, children, right }) {
         <div>
           <h2 className="text-lg md:text-xl font-semibold">{title}</h2>
           {subtitle ? (
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{subtitle}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-0.5">{subtitle}</p>
           ) : null}
         </div>
         {right}
@@ -381,6 +381,22 @@ function CopyBtn({ text }) {
   );
 }
 
+function CopyMarkdownBtn({ term }) {
+  const generateMarkdown = (t) => {
+    let md = `# ${t.abbr}\n\n`;
+    if (t.en?.title) md += `**English**: ${t.en.title}\n\n`;
+    if (t.vi?.title) md += `**Tiếng Việt**: ${t.vi.title}\n\n`;
+    if (t.en?.def) md += `## Definition (EN)\n${t.en.def}\n\n`;
+    if (t.en?.example) md += `*Example*: ${t.en.example}\n\n`;
+    if (t.vi?.def) md += `## Định nghĩa (VI)\n${t.vi.def}\n\n`;
+    if (t.vi?.example) md += `*Ví dụ*: ${t.vi.example}\n\n`;
+    if (t.tags?.length) md += `**Tags**: ${t.tags.join(', ')}\n\n`;
+    return md;
+  };
+
+  return <CopyBtn text={generateMarkdown(term)} />;
+}
+
 function Converters() {
   const { hex, dec, bin, setHex, setDec, setBin } = useTriBaseSync();
   return (
@@ -407,6 +423,22 @@ function Converters() {
         </div>
       </SectionCard>
     </div>
+  );
+}
+
+function TabBtn({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={classNames(
+        "px-3 py-2 rounded-lg text-sm border transition-colors duration-200",
+        active
+          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
+          : "bg-white text-gray-700 dark:bg-zinc-800 dark:text-gray-200 border-gray-300 dark:border-zinc-600 hover:bg-gray-50 dark:hover:bg-zinc-700"
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -534,572 +566,7 @@ function useTerms() {
   return { terms, upsert, remove };
 }
 
-function Glossary() {
-  const { terms, upsert, remove } = useTerms();
-  const [q, setQ] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [editing, setEditing] = useState(null);
 
-  const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const arr = [...terms];
-    if (!s) return arr.sort((a,b)=>a.abbr.localeCompare(b.abbr));
-    const occ = (n,h="")=>{
-      n=n.toLowerCase(); h=(h||"").toLowerCase();
-      let i=0,c=0; while((i=h.indexOf(n,i))!==-1){c++; i+=n.length;} return c;
-    };
-    const score = (t)=>{
-      const w = {exact:100,prefix:50,inAbbr:5,inTitle:3,inDef:1,inTags:2};
-      const ab=(t.abbr||"").toLowerCase();
-      let sc=0;
-      if(ab===s) sc+=w.exact;
-      if(ab.startsWith(s)) sc+=w.prefix;
-      sc+=occ(s,t.abbr)*w.inAbbr;
-      sc+=occ(s,(t.en?.title||"")+" "+(t.vi?.title||""))*w.inTitle;
-      sc+=occ(s,(t.en?.def||"")+" "+(t.vi?.def||""))*w.inDef;
-      sc+=occ(s,(t.tags||[]).join(" "))*w.inTags;
-      return sc;
-    };
-    return arr.map(t=>({t,s:score(t)}))
-      .filter(x=>x.s>0)
-      .sort((a,b)=>(b.s-a.s)||a.t.abbr.localeCompare(b.t.abbr))
-      .map(x=>x.t);
-  }, [terms,q]);
-
-  return (
-    <div className="grid lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-1">
-        <SectionCard
-          title="Glossary / Từ vựng"
-          subtitle="Song ngữ EN–VI, tập trung IT & mạng"
-          right={
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEditing({})}
-                className="text-xs px-3 py-1 rounded-lg border"
-              >
-                + Add
-              </button>
-            </div>
-          }
-        >
-          <Field label="Search / Tìm kiếm" value={q} onChange={setQ} placeholder="IP, TCP, DNS…" />
-          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[460px] overflow-auto pr-1">
-            {list.map((t) => (
-              <TermItem key={t.id} t={t} onSelect={setSelected} />
-            ))}
-            {!list.length && (
-              <div className="text-sm text-gray-500">No results. Try another keyword.</div>
-            )}
-          </div>
-        </SectionCard>
-      </div>
-
-      <div className="lg:col-span-2 grid gap-4">
-        {editing ? (
-          <TermEditor
-            initial={editing?.id ? editing : null}
-            onSave={(t) => {
-              upsert(t);
-              setEditing(null);
-              setSelected(t);
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <TermDetail
-            t={selected || list[0]}
-            onEdit={() => setEditing(selected || list[0])}
-            onDelete={() => {
-              const target = selected || list[0];
-              if (target && confirm(`Delete ${target.abbr}?`)) {
-                remove(target.id);
-                setSelected(null);
-              }
-            }}
-          />
-        )}
-
-        <SectionCard title="Backup dữ liệu" subtitle="Sao lưu / Phục hồi glossary qua JSON">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              className="px-3 py-2 rounded-lg border"
-              onClick={() => {
-                const blob = new Blob([JSON.stringify(terms, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "bluwiki_terms.json";
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              Export JSON
-            </button>
-            <label className="px-3 py-2 rounded-lg border cursor-pointer">
-              Import JSON
-              <input
-                type="file"
-                accept="application/json"
-                className="hidden"
-                onChange={async (e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  const text = await f.text();
-                  try {
-                    const parsed = JSON.parse(text);
-                    if (Array.isArray(parsed)) {
-                      localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                      location.reload();
-                    } else {
-                      alert("Invalid JSON format (expecting an array)");
-                    }
-                  } catch (err) {
-                    alert("Failed to parse JSON");
-                  }
-                }}
-              />
-            </label>
-          </div>
-        </SectionCard>
-      </div>
-    </div>
-  );
-}
-
-function TabBtn({ active, onClick, children }) {
-  return (
-    <button
-      className={classNames(
-        "px-3 py-1.5 rounded-xl border text-sm",
-        active ? "bg-black text-white dark:bg-white dark:text-black" : "bg-white dark:bg-zinc-900"
-      )}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-// Global app state hooks
-function useAppState() {
-  const [globalSearch, setGlobalSearch] = useState("");
-  const [selectedTermId, setSelectedTermId] = useState(null);
-  const [activeTag, setActiveTag] = useState(null);
-  const searchInputRef = useRef(null);
-
-  // URL sync for permalinks
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('q');
-    const termId = window.location.hash.slice(1);
-    
-    if (q) setGlobalSearch(q);
-    if (termId) setSelectedTermId(termId);
-  }, []);
-
-  useEffect(() => {
-    if (globalSearch) {
-      const params = new URLSearchParams();
-      params.set('q', globalSearch);
-      window.history.replaceState({}, '', '?' + params.toString());
-    } else {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, [globalSearch]);
-
-  useEffect(() => {
-    if (selectedTermId) {
-      window.history.replaceState({}, '', '#' + selectedTermId);
-    }
-  }, [selectedTermId]);
-
-  return {
-    globalSearch, setGlobalSearch,
-    selectedTermId, setSelectedTermId,
-    activeTag, setActiveTag,
-    searchInputRef
-  };
-}
-
-// Enhanced search with diacritic folding and fuzzy matching
-function useEnhancedSearch(terms, query, activeTag) {
-  return useMemo(() => {
-    let filtered = [...terms];
-    
-    // Filter by active tag first
-    if (activeTag) {
-      filtered = filtered.filter(t => t.tags?.includes(activeTag));
-    }
-    
-    const s = fold(query.trim());
-    if (!s) return filtered.sort((a,b)=>a.abbr.localeCompare(b.abbr));
-    
-    const score = (t) => {
-      const w = {exact:100, prefix:50, fuzzy:25, inAbbr:10, inTitle:5, inDef:2, inTags:3};
-      const ab = fold(t.abbr||"");
-      let sc = 0;
-      
-      // Exact and prefix matches for abbreviation
-      if (ab === s) sc += w.exact;
-      else if (ab.startsWith(s)) sc += w.prefix;
-      else if (editDistLe1(s, ab)) sc += w.fuzzy;
-      
-      // Fuzzy match for title
-      const titleEn = fold(t.en?.title||"");
-      const titleVi = fold(t.vi?.title||"");
-      if (editDistLe1(s, titleEn) || editDistLe1(s, titleVi)) sc += w.fuzzy;
-      
-      // Occurrence-based scoring
-      sc += occ(s, t.abbr) * w.inAbbr;
-      sc += occ(s, (t.en?.title||"") + " " + (t.vi?.title||"")) * w.inTitle;
-      sc += occ(s, (t.en?.def||"") + " " + (t.vi?.def||"")) * w.inDef;
-      sc += occ(s, (t.tags||[]).join(" ")) * w.inTags;
-      
-      return sc;
-    };
-    
-    return filtered.map(t=>({t,s:score(t)}))
-      .filter(x=>x.s>0)
-      .sort((a,b)=>(b.s-a.s)||a.t.abbr.localeCompare(b.t.abbr))
-      .map(x=>x.t);
-  }, [terms, query, activeTag]);
-}
-
-// Hotkeys hook
-function useHotkeys(appState, onAddTerm) {
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      // Focus search on "/"
-      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          appState.searchInputRef.current?.focus();
-        }
-      }
-      
-      // Add term on "n"
-      if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          onAddTerm();
-        }
-      }
-      
-      // Command palette on Ctrl/Cmd+K
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        appState.searchInputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [appState, onAddTerm]);
-}
-
-// Backup date tracking
-function useBackupDate() {
-  const [lastBackup, setLastBackup] = useState(() => {
-    try {
-      return localStorage.getItem(BACKUP_KEY) || null;
-    } catch {
-      return null;
-    }
-  });
-
-  const updateBackupDate = () => {
-    const now = new Date().toISOString();
-    setLastBackup(now);
-    try {
-      localStorage.setItem(BACKUP_KEY, now);
-    } catch {}
-  };
-
-  const daysSinceBackup = lastBackup ? 
-    Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000 * 60 * 60 * 24)) : 
-    999;
-
-  return { lastBackup, updateBackupDate, daysSinceBackup };
-}
-
-function Pill({ children, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={classNames(
-        "inline-block text-xs px-2 py-1 rounded-lg border cursor-pointer transition-colors",
-        active 
-          ? "bg-blue-100 border-blue-300 text-blue-800 dark:bg-blue-900 dark:border-blue-600 dark:text-blue-200"
-          : "bg-gray-100 border-gray-300 text-gray-700 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700"
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function CopyBtn({ text }) {
-  const [ok, setOk] = useState(false);
-  return (
-    <button
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text || "");
-          setOk(true);
-          setTimeout(() => setOk(false), 800);
-        } catch {}
-      }}
-      className="text-xs px-2 py-1 rounded-lg border bg-white hover:bg-gray-50 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-      title="Copy"
-    >
-      {ok ? "Copied" : "Copy"}
-    </button>
-  );
-}
-
-function TermItem({ t, onSelect, isSelected }) {
-  return (
-    <button
-      onClick={() => onSelect?.(t)}
-      className={classNames(
-        "w-full text-left rounded-xl border p-3 transition-colors",
-        isSelected 
-          ? "bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-600"
-          : "hover:bg-gray-50 dark:hover:bg-zinc-800 border-gray-200 dark:border-zinc-800"
-      )}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold tracking-wide">{t.abbr}</span>
-        <span className="text-xs text-gray-600 dark:text-gray-300">{t.en?.title}</span>
-      </div>
-      <div className="mt-1 text-sm leading-snug text-gray-600 dark:text-gray-400 line-clamp-2">{t.en?.def}</div>
-      <div className="mt-2 flex flex-wrap gap-1">{(t.tags || []).map((x) => <Pill key={x}>{x}</Pill>)}</div>
-    </button>
-  );
-}
-
-function TermDetail({ t, onEdit, onDelete, appState }) {
-  if (!t) return (
-    <div className="rounded-2xl border bg-white/60 dark:bg-zinc-900/60 dark:border-zinc-800 p-8 text-center">
-      <div className="text-gray-500 dark:text-gray-400">
-        <div className="text-4xl mb-4">📚</div>
-        <h3 className="text-lg font-medium mb-2">Select a term to view details</h3>
-        <p className="text-sm">Choose from the list or search for specific terms</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="rounded-2xl border bg-white/60 dark:bg-zinc-900/60 dark:border-zinc-800 p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold">
-            {t.abbr} <span className="text-sm text-gray-500">/ {t.en?.title}</span>
-          </h3>
-          <div className="mt-2 grid md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-medium">English</h4>
-              <p className="text-[15px] md:text-base leading-relaxed text-gray-700 dark:text-gray-200 mt-1">{t.en?.def}</p>
-              {t.en?.example ? (
-                <p className="text-xs text-gray-500 mt-1"><span className="font-medium">Example:</span> {t.en.example}</p>
-              ) : null}
-            </div>
-            <div>
-              <h4 className="text-sm font-medium">Tiếng Việt</h4>
-              <p className="text-[15px] md:text-base leading-relaxed text-gray-700 dark:text-gray-200 mt-1">{t.vi?.def}</p>
-              {t.vi?.example ? (
-                <p className="text-xs text-gray-500 mt-1"><span className="font-medium">Ví dụ:</span> {t.vi.example}</p>
-              ) : null}
-            </div>
-          </div>
-          {t.tags?.length ? (
-            <div className="mt-3 flex flex-wrap gap-1">
-              {t.tags.map((tag) => (
-                <Pill 
-                  key={tag} 
-                  active={appState.activeTag === tag}
-                  onClick={() => appState.setActiveTag(appState.activeTag === tag ? null : tag)}
-                >
-                  {tag}
-                </Pill>
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          <CopyMarkdownBtn term={t} />
-          <button onClick={onEdit} className="text-xs px-3 py-1 rounded-lg border">Edit</button>
-          <button onClick={onDelete} className="text-xs px-3 py-1 rounded-lg border text-red-600">Delete</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TermEditor({ initial, onSave, onCancel }) {
-  const [abbr, setAbbr] = useState(initial?.abbr || "");
-  const [enTitle, setEnTitle] = useState(initial?.en?.title || "");
-  const [enDef, setEnDef] = useState(initial?.en?.def || "");
-  const [enExample, setEnExample] = useState(initial?.en?.example || "");
-  const [viTitle, setViTitle] = useState(initial?.vi?.title || "");
-  const [viDef, setViDef] = useState(initial?.vi?.def || "");
-  const [viExample, setViExample] = useState(initial?.vi?.example || "");
-  const [tags, setTags] = useState((initial?.tags || []).join(", "));
-
-  return (
-    <div className="rounded-2xl border bg-white/70 dark:bg-zinc-900/70 dark:border-zinc-800 p-4">
-      <div className="grid md:grid-cols-2 gap-4">
-        <Field label="Abbreviation (viết tắt)" value={abbr} onChange={setAbbr} placeholder="IP, TCP..." />
-        <Field label="Tags (phân cách bằng dấu phẩy)" value={tags} onChange={setTags} placeholder="network, web" />
-        <Field label="EN Title" value={enTitle} onChange={setEnTitle} placeholder="Internet Protocol" />
-        <label className="md:col-span-1">
-          <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">EN Definition</div>
-          <textarea className="w-full rounded-xl border px-3 py-2 min-h-[96px] bg-white dark:bg-zinc-900 border-gray-300 dark:border-zinc-700" value={enDef} onChange={(e)=>setEnDef(e.target.value)} placeholder="Definition in English" />
-        </label>
-        <Field label="EN Example" value={enExample} onChange={setEnExample} placeholder="Example sentence" />
-        <Field label="VI Title" value={viTitle} onChange={setViTitle} placeholder="Giao thức Internet" />
-        <label className="md:col-span-1">
-          <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">VI Định nghĩa</div>
-          <textarea className="w-full rounded-xl border px-3 py-2 min-h-[96px] bg-white dark:bg-zinc-900 border-gray-300 dark:border-zinc-700" value={viDef} onChange={(e)=>setViDef(e.target.value)} placeholder="Định nghĩa tiếng Việt" />
-        </label>
-        <Field label="VI Ví dụ" value={viExample} onChange={setViExample} placeholder="Câu ví dụ" />
-      </div>
-      <div className="mt-4 flex gap-2">
-        <button
-          onClick={() => {
-            const t = {
-              id: (initial?.id || abbr || Math.random().toString(36).slice(2)).toLowerCase(),
-              abbr: abbr.trim(),
-              en: { title: enTitle.trim(), def: enDef.trim(), example: enExample.trim() },
-              vi: { title: viTitle.trim(), def: viDef.trim(), example: viExample.trim() },
-              tags: tags
-                .split(",")
-                .map((x) => x.trim())
-                .filter(Boolean),
-            };
-            onSave?.(t);
-          }}
-          className="px-3 py-2 rounded-lg border bg-black text-white dark:bg-white dark:text-black"
-        >
-          Save
-        </button>
-        <button onClick={onCancel} className="px-3 py-2 rounded-lg border">Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-function useTerms() {
-  const [terms, setTerms] = useLocalStorageState(STORAGE_KEY, seedTerms);
-  const upsert = (t) => {
-    setTerms((prev) => {
-      const i = prev.findIndex((x) => x.id === t.id);
-      if (i >= 0) {
-        const copy = prev.slice();
-        copy[i] = t;
-        return copy;
-      }
-      return [...prev, t];
-    });
-  };
-  const remove = (id) => setTerms((prev) => prev.filter((x) => x.id !== id));
-  return { terms, upsert, remove };
-}
-
-function Glossary() {
-  const { terms, upsert, remove } = useTerms();
-  const [q, setQ] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [editing, setEditing] = useState(null);
-
-  const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const arr = [...terms];
-    if (!s) return arr.sort((a,b)=>a.abbr.localeCompare(b.abbr));
-    const occ = (n,h="")=>{
-      n=n.toLowerCase(); h=(h||"").toLowerCase();
-      let i=0,c=0; while((i=h.indexOf(n,i))!==-1){c++; i+=n.length;} return c;
-    };
-    const score = (t)=>{
-      const w = {exact:100,prefix:50,inAbbr:5,inTitle:3,inDef:1,inTags:2};
-      const ab=(t.abbr||"").toLowerCase();
-      let sc=0;
-      if(ab===s) sc+=w.exact;
-      if(ab.startsWith(s)) sc+=w.prefix;
-      sc+=occ(s,t.abbr)*w.inAbbr;
-      sc+=occ(s,(t.en?.title||"")+" "+(t.vi?.title||""))*w.inTitle;
-      sc+=occ(s,(t.en?.def||"")+" "+(t.vi?.def||""))*w.inDef;
-      sc+=occ(s,(t.tags||[]).join(" "))*w.inTags;
-      return sc;
-    };
-    return arr.map(t=>({t,s:score(t)}))
-      .filter(x=>x.s>0)
-      .sort((a,b)=>(b.s-a.s)||a.t.abbr.localeCompare(b.t.abbr))
-      .map(x=>x.t);
-  }, [terms,q]);
-
-  return (
-    <div className="grid lg:grid-cols-3 gap-4">
-      <div className="lg:col-span-1">
-        <SectionCard
-          title="Glossary / Từ vựng"
-          subtitle="Song ngữ EN–VI, tập trung IT & mạng"
-          right={
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEditing({})}
-                className="text-xs px-3 py-1 rounded-lg border"
-              >
-                + Add
-              </button>
-            </div>
-          }
-        >
-          <Field label="Search / Tìm kiếm" value={q} onChange={setQ} placeholder="IP, TCP, DNS…" />
-          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[460px] overflow-auto pr-1">
-            {list.map((t) => (
-              <TermItem key={t.id} t={t} onSelect={setSelected} />
-            ))}
-            {!list.length && (
-              <div className="text-sm text-gray-500">No results. Try another keyword.</div>
-            )}
-          </div>
-        </SectionCard>
-      </div>
-
-      <div className="lg:col-span-2 grid gap-4">
-        {editing ? (
-          <TermEditor
-            initial={editing?.id ? editing : null}
-            onSave={(t) => {
-              upsert(t);
-              setEditing(null);
-              setSelected(t);
-            }}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <TermDetail
-            t={selected || list[0]}
-            onEdit={() => setEditing(selected || list[0])}
-            onDelete={() => {
-              const target = selected || list[0];
-              if (target && confirm(`Delete ${target.abbr}?`)) {
-                remove(target.id);
-                setSelected(null);
-              }
-            }}
-          />
-        )}
-
-        <SectionCard title="Backup dữ liệu" subtitle="Sao lưu / Phục hồi glossary qua JSON">
-          <BackupSection terms={terms} />
-        </SectionCard>
-      </div>
-    </div>
-  );
-}
 
 function BackupSection({ terms }) {
   const { updateBackupDate } = useBackupDate();
@@ -1242,6 +709,835 @@ export default function BluWiki() {
         </div>
         
         <AppFooter terms={terms} />
+      </div>
+    </div>
+  );
+}
+
+// Add missing hooks before existing functions
+function useAppState() {
+  const [terms, setTerms] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : seedTerms;
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState(null);
+  const [isAddingTerm, setIsAddingTerm] = useState(false);
+  const [activeTag, setActiveTag] = useState('');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [isPrintMode, setIsPrintMode] = useState(false);
+
+  const { fold, occ, editDistLe1 } = useEnhancedSearch();
+
+  // Save to localStorage whenever terms change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
+  }, [terms]);
+
+  // Enhanced search with relevance scoring
+  const filteredTerms = useMemo(() => {
+    let filtered = terms;
+
+    // Filter by active tag
+    if (activeTag) {
+      filtered = filtered.filter(term => term.tags?.includes(activeTag));
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim();
+      filtered = filtered
+        .map(term => {
+          let score = 0;
+          
+          // Exact matches get highest score
+          if (fold(term.term).includes(fold(query))) score += 100;
+          if (fold(term.definition).includes(fold(query))) score += 50;
+          
+          // Fuzzy matches
+          if (editDistLe1(query, term.term)) score += 80;
+          
+          // Occurrence counting
+          score += occ(query, term.term) * 30;
+          score += occ(query, term.definition) * 10;
+          
+          // Tag matches
+          if (term.tags?.some(tag => fold(tag).includes(fold(query)))) score += 40;
+          
+          return { ...term, relevanceScore: score };
+        })
+        .filter(term => term.relevanceScore > 0)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    }
+
+    return filtered;
+  }, [terms, searchQuery, activeTag, fold, occ, editDistLe1]);
+
+  // Get all unique tags
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    terms.forEach(term => {
+      term.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [terms]);
+
+  const addTerm = (newTerm) => {
+    const term = {
+      ...newTerm,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    setTerms(prev => [term, ...prev]);
+    setIsAddingTerm(false);
+  };
+
+  const updateTerm = (id, updatedTerm) => {
+    setTerms(prev => prev.map(term => 
+      term.id === id ? { ...term, ...updatedTerm } : term
+    ));
+    setSelectedTerm(null);
+  };
+
+  const deleteTerm = (id) => {
+    setTerms(prev => prev.filter(term => term.id !== id));
+    setSelectedTerm(null);
+  };
+
+  const copyAsMarkdown = (term) => {
+    const markdown = `## ${term.term}\n\n${term.definition}${term.tags?.length ? `\n\n**Tags:** ${term.tags.join(', ')}` : ''}`;
+    navigator.clipboard.writeText(markdown);
+  };
+
+  const exportData = () => {
+    const dataStr = JSON.stringify(terms, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'blu-wiki-backup.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedTerms = JSON.parse(e.target.result);
+          setTerms(importedTerms);
+        } catch (error) {
+          alert('Invalid file format');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+  
+  return {
+    searchQuery,
+    setSearchQuery,
+    activeTag,
+    setActiveTag,
+    allTags,
+    filteredTerms,
+    selectedTerm,
+    setSelectedTerm,
+    isAddingTerm,
+    setIsAddingTerm,
+    addTerm,
+    updateTerm,
+    deleteTerm,
+    copyAsMarkdown,
+    exportData,
+    importData,
+    showCommandPalette,
+    setShowCommandPalette,
+    isPrintMode,
+    setIsPrintMode,
+    terms
+  };
+}
+
+function useBackupDate() {
+  const [lastBackup, setLastBackup] = useLocalStorageState("bluwiki.lastBackup", null);
+  
+  const updateBackupDate = () => {
+    setLastBackup(new Date().toISOString());
+  };
+  
+  const daysSinceBackup = useMemo(() => {
+    if (!lastBackup) return 999;
+    try {
+      const diffTime = Date.now() - new Date(lastBackup).getTime();
+      return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return 999;
+    }
+  }, [lastBackup]);
+  
+  return { lastBackup, daysSinceBackup, updateBackupDate };
+}
+
+function useEnhancedSearch() {
+  const fold = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const occ = (needle, haystack = "") => {
+    needle = fold(needle); haystack = fold(haystack);
+    let index = 0, count = 0; while ((index = haystack.indexOf(needle, index)) !== -1) { count++; index += needle.length; } return count;
+  };
+  const editDistLe1 = (a, b) => {
+    a = fold(a); b = fold(b);
+    if (Math.abs(a.length - b.length) > 1) return false;
+    if (a === b) return true;
+    const [s, l] = a.length <= b.length ? [a, b] : [b, a];
+    for (let i = 0; i <= s.length; i++) {
+      if (s === l.slice(0, i) + l.slice(i + 1)) return true;
+      if (i < s.length && s.slice(0, i) + s.slice(i + 1) === l) return true;
+      if (i < s.length && s.slice(0, i) + s[i + 1] + s[i] + s.slice(i + 2) === l) return true;
+    }
+    return false;
+  };
+  return { fold, occ, editDistLe1 };
+}
+
+// Main App component
+function App() {
+  const [terms, setTerms] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : seedTerms;
+  });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState(null);
+  const [isAddingTerm, setIsAddingTerm] = useState(false);
+  const [activeTag, setActiveTag] = useState('');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [isPrintMode, setIsPrintMode] = useState(false);
+
+  const { fold, occ, editDistLe1 } = useEnhancedSearch();
+
+  // Save to localStorage whenever terms change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
+  }, [terms]);
+
+  // Handle URL permalinks
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        const term = terms.find(t => t.id === hash);
+        if (term) setSelectedTerm(term);
+      }
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q');
+    if (query) setSearchQuery(query);
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [terms]);
+
+  // Hotkeys
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        document.querySelector('input[type="search"]')?.focus();
+      } else if (e.key === 'n' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setIsAddingTerm(true);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette(true);
+      } else if (e.key === 'Escape') {
+        setSelectedTerm(null);
+        setIsAddingTerm(false);
+        setShowCommandPalette(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Enhanced search with relevance scoring
+  const filteredTerms = useMemo(() => {
+    let filtered = terms;
+
+    // Filter by active tag
+    if (activeTag) {
+      filtered = filtered.filter(term => term.tags?.includes(activeTag));
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim();
+      filtered = filtered
+        .map(term => {
+          let score = 0;
+          
+          // Exact matches get highest score
+          if (fold(term.term).includes(fold(query))) score += 100;
+          if (fold(term.definition).includes(fold(query))) score += 50;
+          
+          // Fuzzy matches
+          if (editDistLe1(query, term.term)) score += 80;
+          
+          // Occurrence counting
+          score += occ(query, term.term) * 30;
+          score += occ(query, term.definition) * 10;
+          
+          // Tag matches
+          if (term.tags?.some(tag => fold(tag).includes(fold(query)))) score += 40;
+          
+          return { ...term, relevanceScore: score };
+        })
+        .filter(term => term.relevanceScore > 0)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore);
+    }
+
+    return filtered;
+  }, [terms, searchQuery, activeTag, fold, occ, editDistLe1]);
+
+  // Get all unique tags
+  const allTags = useMemo(() => {
+    const tagSet = new Set();
+    terms.forEach(term => {
+      term.tags?.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [terms]);
+
+  const addTerm = (newTerm) => {
+    const term = {
+      ...newTerm,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
+    setTerms(prev => [term, ...prev]);
+    setIsAddingTerm(false);
+  };
+
+  const updateTerm = (id, updatedTerm) => {
+    setTerms(prev => prev.map(term => 
+      term.id === id ? { ...term, ...updatedTerm } : term
+    ));
+    setSelectedTerm(null);
+  };
+
+  const deleteTerm = (id) => {
+    setTerms(prev => prev.filter(term => term.id !== id));
+    setSelectedTerm(null);
+  };
+
+  const copyAsMarkdown = (term) => {
+    const markdown = `## ${term.term}\n\n${term.definition}${term.tags?.length ? `\n\n**Tags:** ${term.tags.join(', ')}` : ''}`;
+    navigator.clipboard.writeText(markdown);
+  };
+
+  const exportData = () => {
+    const dataStr = JSON.stringify(terms, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'blu-wiki-backup.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedTerms = JSON.parse(e.target.result);
+          setTerms(importedTerms);
+        } catch (error) {
+          alert('Invalid file format');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const appState = {
+    searchQuery,
+    setSearchQuery,
+    activeTag,
+    setActiveTag,
+    allTags,
+    filteredTerms,
+    selectedTerm,
+    setSelectedTerm,
+    isAddingTerm,
+    setIsAddingTerm,
+    addTerm,
+    updateTerm,
+    deleteTerm,
+    copyAsMarkdown,
+    exportData,
+    importData,
+    showCommandPalette,
+    setShowCommandPalette,
+    isPrintMode,
+    setIsPrintMode
+  };
+
+  return (
+    <div className={`min-h-screen bg-gray-50 ${isPrintMode ? 'print-mode' : ''}`}>
+      <Header appState={appState} />
+      <main className="container mx-auto px-4 py-8">
+        <Glossary appState={appState} />
+      </main>
+      <Footer terms={terms} />
+      {showCommandPalette && <CommandPalette appState={appState} />}
+      {selectedTerm && <TermModal appState={appState} />}
+      {isAddingTerm && <AddTermModal appState={appState} />}
+    </div>
+  );
+}
+
+// Header component
+function Header({ appState }) {
+  const { searchQuery, setSearchQuery, exportData, importData, setShowCommandPalette, isPrintMode, setIsPrintMode } = appState;
+
+  return (
+    <header className="sticky top-0 z-50 bg-white shadow-sm border-b">
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold text-blue-600">BluWiki</h1>
+          
+          <div className="flex-1 max-w-md">
+            <input
+              type="search"
+              placeholder="Search terms... (Press / to focus)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCommandPalette(true)}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Command Palette (Ctrl/⌘+K)"
+            >
+              ⌘K
+            </button>
+            
+            <button
+              onClick={() => setIsPrintMode(!isPrintMode)}
+              className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              title="Toggle Print Mode"
+            >
+              🖨️
+            </button>
+            
+            <button
+              onClick={exportData}
+              className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
+              title="Export Data"
+            >
+              Export
+            </button>
+            
+            <label className="px-3 py-2 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors cursor-pointer">
+              Import
+              <input type="file" accept=".json" onChange={importData} className="hidden" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// Footer component
+function Footer({ terms }) {
+  const totalTerms = terms.length;
+  const totalTags = new Set(terms.flatMap(term => term.tags || [])).size;
+  const lastUpdated = terms.length > 0 ? new Date(Math.max(...terms.map(t => new Date(t.createdAt || Date.now())))).toLocaleDateString() : 'Never';
+
+  return (
+    <footer className="bg-gray-100 border-t mt-8">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-600">
+          <div className="flex gap-6">
+            <span>{totalTerms} terms</span>
+            <span>{totalTags} tags</span>
+            <span>Last updated: {lastUpdated}</span>
+          </div>
+          
+          <div className="text-xs">
+            💡 Remember to backup your data regularly!
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// Command Palette component
+function CommandPalette({ appState }) {
+  const { setShowCommandPalette, setIsAddingTerm, exportData, setIsPrintMode } = appState;
+  
+  const commands = [
+    { id: 'add', label: 'Add New Term', action: () => setIsAddingTerm(true) },
+    { id: 'export', label: 'Export Data', action: exportData },
+    { id: 'print', label: 'Toggle Print Mode', action: () => setIsPrintMode(prev => !prev) },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-20 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div className="p-4 border-b">
+          <h3 className="font-semibold">Command Palette</h3>
+        </div>
+        <div className="p-2">
+          {commands.map(cmd => (
+            <button
+              key={cmd.id}
+              onClick={() => {
+                cmd.action();
+                setShowCommandPalette(false);
+              }}
+              className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded transition-colors"
+            >
+              {cmd.label}
+            </button>
+          ))}
+        </div>
+        <div className="p-4 border-t text-xs text-gray-500">
+          Press Escape to close
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Glossary component
+function Glossary({ appState }) {
+  const { 
+    filteredTerms, 
+    selectedTerm, 
+    setSelectedTerm, 
+    activeTag, 
+    setActiveTag, 
+    allTags, 
+    searchQuery,
+    setIsAddingTerm 
+  } = appState;
+
+  if (filteredTerms.length === 0 && searchQuery.trim()) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-6xl mb-4">🔍</div>
+        <h3 className="text-xl font-semibold mb-2">No results found</h3>
+        <p className="text-gray-600 mb-4">Try adjusting your search or browse by tags</p>
+        <button
+          onClick={() => setIsAddingTerm(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Add New Term
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Tag Filter */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTag('')}
+            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+              !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
+          >
+            All
+          </button>
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Terms Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredTerms.map(term => (
+          <TermCard
+            key={term.id}
+            term={term}
+            onClick={() => {
+              setSelectedTerm(term);
+              window.location.hash = term.id;
+            }}
+            onTagClick={(tag) => setActiveTag(tag)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Term Card component
+function TermCard({ term, onClick, onTagClick }) {
+  return (
+    <div
+      className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
+      <h3 className="font-semibold text-lg mb-2 text-blue-600">{term.term}</h3>
+      <p className="text-gray-700 text-sm mb-3 line-clamp-3">{term.definition}</p>
+      
+      {term.tags && term.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {term.tags.map(tag => (
+            <span
+              key={tag}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTagClick(tag);
+              }}
+              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200 transition-colors"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Term Modal component
+function TermModal({ appState }) {
+  const { selectedTerm, setSelectedTerm, updateTerm, deleteTerm, copyAsMarkdown } = appState;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    term: selectedTerm?.term || '',
+    definition: selectedTerm?.definition || '',
+    tags: selectedTerm?.tags?.join(', ') || ''
+  });
+
+  const handleSave = () => {
+    updateTerm(selectedTerm.id, {
+      ...editForm,
+      tags: editForm.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+    });
+    setIsEditing(false);
+  };
+
+  if (!selectedTerm) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-blue-600">
+              {isEditing ? (
+                <input
+                  value={editForm.term}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, term: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              ) : (
+                selectedTerm.term
+              )}
+            </h2>
+            <button
+              onClick={() => setSelectedTerm(null)}
+              className="text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            {isEditing ? (
+              <textarea
+                value={editForm.definition}
+                onChange={(e) => setEditForm(prev => ({ ...prev, definition: e.target.value }))}
+                className="w-full px-3 py-2 border rounded-lg h-32"
+              />
+            ) : (
+              <p className="text-gray-700 leading-relaxed">{selectedTerm.definition}</p>
+            )}
+          </div>
+          
+          {(selectedTerm.tags?.length > 0 || isEditing) && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+              {isEditing ? (
+                <input
+                  value={editForm.tags}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, tags: e.target.value }))}
+                  placeholder="tag1, tag2, tag3"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {selectedTerm.tags.map(tag => (
+                    <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          
+          <div className="flex gap-2 pt-4 border-t">
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => copyAsMarkdown(selectedTerm)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Copy as Markdown
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete this term?')) {
+                      deleteTerm(selectedTerm.id);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Add Term Modal component
+function AddTermModal({ appState }) {
+  const { setIsAddingTerm, addTerm } = appState;
+  const [form, setForm] = useState({ term: '', definition: '', tags: '' });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (form.term.trim() && form.definition.trim()) {
+      addTerm({
+        ...form,
+        tags: form.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+      });
+      setForm({ term: '', definition: '', tags: '' });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">Add New Term</h2>
+            <button
+              type="button"
+              onClick={() => setIsAddingTerm(false)}
+              className="text-gray-500 hover:text-gray-700 text-2xl"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+              <input
+                type="text"
+                value={form.term}
+                onChange={(e) => setForm(prev => ({ ...prev, term: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Definition</label>
+              <textarea
+                value={form.definition}
+                onChange={(e) => setForm(prev => ({ ...prev, definition: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-24"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+              <input
+                type="text"
+                value={form.tags}
+                onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))}
+                placeholder="tag1, tag2, tag3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-2 pt-4 mt-6 border-t">
+            <button
+              type="submit"
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Add Term
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddingTerm(false)}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

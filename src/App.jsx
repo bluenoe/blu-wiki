@@ -769,16 +769,31 @@ function useAppState() {
         .map(term => {
           let score = 0;
           
+          // Get searchable text from bilingual structure
+          const abbr = term.abbr || term.term || '';
+          const enTitle = term.en?.title || '';
+          const enDef = term.en?.def || term.definition || '';
+          const viTitle = term.vi?.title || '';
+          const viDef = term.vi?.def || '';
+          
           // Exact matches get highest score
-          if (fold(term.term).includes(fold(query))) score += 100;
-          if (fold(term.definition).includes(fold(query))) score += 50;
+          if (fold(abbr).includes(fold(query))) score += 100;
+          if (fold(enTitle).includes(fold(query))) score += 90;
+          if (fold(viTitle).includes(fold(query))) score += 90;
+          if (fold(enDef).includes(fold(query))) score += 50;
+          if (fold(viDef).includes(fold(query))) score += 50;
           
           // Fuzzy matches
-          if (editDistLe1(query, term.term)) score += 80;
+          if (editDistLe1(query, abbr)) score += 80;
+          if (editDistLe1(query, enTitle)) score += 70;
+          if (editDistLe1(query, viTitle)) score += 70;
           
           // Occurrence counting
-          score += occ(query, term.term) * 30;
-          score += occ(query, term.definition) * 10;
+          score += occ(query, abbr) * 30;
+          score += occ(query, enTitle) * 25;
+          score += occ(query, viTitle) * 25;
+          score += occ(query, enDef) * 10;
+          score += occ(query, viDef) * 10;
           
           // Tag matches
           if (term.tags?.some(tag => fold(tag).includes(fold(query)))) score += 40;
@@ -824,7 +839,30 @@ function useAppState() {
   };
 
   const copyAsMarkdown = (term) => {
-    const markdown = `## ${term.term}\n\n${term.definition}${term.tags?.length ? `\n\n**Tags:** ${term.tags.join(', ')}` : ''}`;
+    const abbr = term.abbr || term.term || 'Unknown';
+    const enTitle = term.en?.title || '';
+    const enDef = term.en?.def || term.definition || '';
+    const viTitle = term.vi?.title || '';
+    const viDef = term.vi?.def || '';
+    
+    let markdown = `## ${abbr}\n\n`;
+    
+    if (enTitle || enDef) {
+      markdown += `### English\n`;
+      if (enTitle) markdown += `**${enTitle}**\n\n`;
+      if (enDef) markdown += `${enDef}\n\n`;
+    }
+    
+    if (viTitle || viDef) {
+      markdown += `### Vietnamese\n`;
+      if (viTitle) markdown += `**${viTitle}**\n\n`;
+      if (viDef) markdown += `${viDef}\n\n`;
+    }
+    
+    if (term.tags?.length) {
+      markdown += `**Tags:** ${term.tags.join(', ')}`;
+    }
+    
     navigator.clipboard.writeText(markdown);
   };
 
@@ -1278,8 +1316,8 @@ function Glossary({ appState }) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔍</div>
-        <h3 className="text-xl font-semibold mb-2">No results found</h3>
-        <p className="text-gray-600 mb-4">Try adjusting your search or browse by tags</p>
+        <h3 className="text-xl font-semibold mb-2 dark:text-gray-200">No results found</h3>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">Try adjusting your search or browse by tags</p>
         <button
           onClick={() => setIsAddingTerm(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1298,7 +1336,7 @@ function Glossary({ appState }) {
           <button
             onClick={() => setActiveTag('')}
             className={`px-3 py-1 rounded-full text-sm transition-colors ${
-              !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+              !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
             }`}
           >
             All
@@ -1308,7 +1346,7 @@ function Glossary({ appState }) {
               key={tag}
               onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
               className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+                activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
               }`}
             >
               {tag}
@@ -1339,11 +1377,19 @@ function Glossary({ appState }) {
 function TermCard({ term, onClick, onTagClick }) {
   return (
     <div
-      className="bg-white p-4 rounded-lg shadow-sm border hover:shadow-md transition-shadow cursor-pointer"
+      className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:shadow-md dark:hover:shadow-zinc-900/20 transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <h3 className="font-semibold text-lg mb-2 text-blue-600">{term.term}</h3>
-      <p className="text-gray-700 text-sm mb-3 line-clamp-3">{term.definition}</p>
+      <div className="mb-2">
+        <h3 className="font-semibold text-lg text-blue-600 dark:text-blue-400">{term.abbr}</h3>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="font-medium">{term.en?.title}</div>
+          {term.vi?.title && <div className="italic">{term.vi.title}</div>}
+        </div>
+      </div>
+      <p className="text-gray-700 dark:text-gray-300 text-sm mb-3 line-clamp-3">
+        {term.en?.def || term.definition}
+      </p>
       
       {term.tags && term.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -1354,7 +1400,7 @@ function TermCard({ term, onClick, onTagClick }) {
                 e.stopPropagation();
                 onTagClick(tag);
               }}
-              className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 text-xs rounded hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors"
             >
               {tag}
             </span>
@@ -1370,14 +1416,29 @@ function TermModal({ appState }) {
   const { selectedTerm, setSelectedTerm, updateTerm, deleteTerm, copyAsMarkdown } = appState;
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    term: selectedTerm?.term || '',
-    definition: selectedTerm?.definition || '',
+    abbr: selectedTerm?.abbr || '',
+    enTitle: selectedTerm?.en?.title || '',
+    enDef: selectedTerm?.en?.def || '',
+    enExample: selectedTerm?.en?.example || '',
+    viTitle: selectedTerm?.vi?.title || '',
+    viDef: selectedTerm?.vi?.def || '',
+    viExample: selectedTerm?.vi?.example || '',
     tags: selectedTerm?.tags?.join(', ') || ''
   });
 
   const handleSave = () => {
     updateTerm(selectedTerm.id, {
-      ...editForm,
+      abbr: editForm.abbr,
+      en: {
+        title: editForm.enTitle,
+        def: editForm.enDef,
+        example: editForm.enExample
+      },
+      vi: {
+        title: editForm.viTitle,
+        def: editForm.viDef,
+        example: editForm.viExample
+      },
       tags: editForm.tags.split(',').map(tag => tag.trim()).filter(Boolean)
     });
     setIsEditing(false);
@@ -1387,54 +1448,143 @@ function TermModal({ appState }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-blue-600">
+            <div className="flex-1">
               {isEditing ? (
                 <input
-                  value={editForm.term}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, term: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  value={editForm.abbr}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, abbr: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 text-2xl font-bold"
+                  placeholder="Abbreviation"
                 />
               ) : (
-                selectedTerm.term
+                <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">{selectedTerm.abbr}</h2>
               )}
-            </h2>
+            </div>
             <button
               onClick={() => setSelectedTerm(null)}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl ml-4"
             >
               ×
             </button>
           </div>
           
-          <div className="mb-4">
-            {isEditing ? (
-              <textarea
-                value={editForm.definition}
-                onChange={(e) => setEditForm(prev => ({ ...prev, definition: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg h-32"
-              />
-            ) : (
-              <p className="text-gray-700 leading-relaxed">{selectedTerm.definition}</p>
-            )}
+          {/* English Section */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+              <span className="mr-2">🇺🇸</span> English
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Title</label>
+                {isEditing ? (
+                  <input
+                    value={editForm.enTitle}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, enTitle: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="English title"
+                  />
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300 font-medium">{selectedTerm.en?.title}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Definition</label>
+                {isEditing ? (
+                  <textarea
+                    value={editForm.enDef}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, enDef: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-24 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="English definition"
+                  />
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{selectedTerm.en?.def}</p>
+                )}
+              </div>
+              {(selectedTerm.en?.example || isEditing) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Example</label>
+                  {isEditing ? (
+                    <textarea
+                      value={editForm.enExample}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, enExample: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-20 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                      placeholder="English example"
+                    />
+                  ) : (
+                    selectedTerm.en?.example && <p className="text-gray-600 dark:text-gray-400 italic">{selectedTerm.en.example}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Vietnamese Section */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
+              <span className="mr-2">🇻🇳</span> Tiếng Việt
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Tiêu đề</label>
+                {isEditing ? (
+                  <input
+                    value={editForm.viTitle}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, viTitle: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Vietnamese title"
+                  />
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300 font-medium">{selectedTerm.vi?.title}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Định nghĩa</label>
+                {isEditing ? (
+                  <textarea
+                    value={editForm.viDef}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, viDef: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-24 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Vietnamese definition"
+                  />
+                ) : (
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{selectedTerm.vi?.def}</p>
+                )}
+              </div>
+              {(selectedTerm.vi?.example || isEditing) && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Ví dụ</label>
+                  {isEditing ? (
+                    <textarea
+                      value={editForm.viExample}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, viExample: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-20 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                      placeholder="Vietnamese example"
+                    />
+                  ) : (
+                    selectedTerm.vi?.example && <p className="text-gray-600 dark:text-gray-400 italic">{selectedTerm.vi.example}</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           
           {(selectedTerm.tags?.length > 0 || isEditing) && (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tags</label>
               {isEditing ? (
                 <input
                   value={editForm.tags}
                   onChange={(e) => setEditForm(prev => ({ ...prev, tags: e.target.value }))}
                   placeholder="tag1, tag2, tag3"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
                 />
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {selectedTerm.tags.map(tag => (
-                    <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 text-sm rounded">
+                    <span key={tag} className="px-2 py-1 bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 text-sm rounded">
                       {tag}
                     </span>
                   ))}
@@ -1443,7 +1593,7 @@ function TermModal({ appState }) {
             </div>
           )}
           
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-2 pt-4 border-t border-gray-200 dark:border-zinc-700">
             {isEditing ? (
               <>
                 <button
@@ -1454,7 +1604,7 @@ function TermModal({ appState }) {
                 </button>
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  className="px-4 py-2 bg-gray-300 dark:bg-zinc-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-zinc-500 transition-colors"
                 >
                   Cancel
                 </button>
@@ -1495,29 +1645,58 @@ function TermModal({ appState }) {
 // Add Term Modal component
 function AddTermModal({ appState }) {
   const { setIsAddingTerm, addTerm } = appState;
-  const [form, setForm] = useState({ term: '', definition: '', tags: '' });
+  const [form, setForm] = useState({ 
+    abbr: '', 
+    enTitle: '', 
+    enDef: '', 
+    enExample: '',
+    viTitle: '', 
+    viDef: '', 
+    viExample: '',
+    tags: '' 
+  });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (form.term.trim() && form.definition.trim()) {
-      addTerm({
-        ...form,
+    if (form.abbr.trim() && (form.enDef.trim() || form.viDef.trim())) {
+      const newTerm = {
+        abbr: form.abbr,
+        en: {
+          title: form.enTitle,
+          def: form.enDef,
+          example: form.enExample
+        },
+        vi: {
+          title: form.viTitle,
+          def: form.viDef,
+          example: form.viExample
+        },
         tags: form.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+      };
+      addTerm(newTerm);
+      setForm({ 
+        abbr: '', 
+        enTitle: '', 
+        enDef: '', 
+        enExample: '',
+        viTitle: '', 
+        viDef: '', 
+        viExample: '',
+        tags: '' 
       });
-      setForm({ term: '', definition: '', tags: '' });
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Add New Term</h2>
+            <h2 className="text-xl font-bold dark:text-gray-200">Add New Term</h2>
             <button
               type="button"
               onClick={() => setIsAddingTerm(false)}
-              className="text-gray-500 hover:text-gray-700 text-2xl"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl"
             >
               ×
             </button>
@@ -1525,39 +1704,96 @@ function AddTermModal({ appState }) {
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Abbreviation</label>
               <input
                 type="text"
-                value={form.term}
-                onChange={(e) => setForm(prev => ({ ...prev, term: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={form.abbr}
+                onChange={(e) => setForm(prev => ({ ...prev, abbr: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                placeholder="e.g., HTTP, TCP, DNS"
                 required
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Definition</label>
-              <textarea
-                value={form.definition}
-                onChange={(e) => setForm(prev => ({ ...prev, definition: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-24"
-                required
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">English</h3>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={form.enTitle}
+                    onChange={(e) => setForm(prev => ({ ...prev, enTitle: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="English title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Definition</label>
+                  <textarea
+                    value={form.enDef}
+                    onChange={(e) => setForm(prev => ({ ...prev, enDef: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-20 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="English definition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Example</label>
+                  <textarea
+                    value={form.enExample}
+                    onChange={(e) => setForm(prev => ({ ...prev, enExample: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-16 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="English example"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Vietnamese</h3>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tiêu đề</label>
+                  <input
+                    type="text"
+                    value={form.viTitle}
+                    onChange={(e) => setForm(prev => ({ ...prev, viTitle: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Vietnamese title"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Định nghĩa</label>
+                  <textarea
+                    value={form.viDef}
+                    onChange={(e) => setForm(prev => ({ ...prev, viDef: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-20 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Vietnamese definition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Ví dụ</label>
+                  <textarea
+                    value={form.viExample}
+                    onChange={(e) => setForm(prev => ({ ...prev, viExample: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-16 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    placeholder="Vietnamese example"
+                  />
+                </div>
+              </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
               <input
                 type="text"
                 value={form.tags}
                 onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))}
                 placeholder="tag1, tag2, tag3"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
               />
             </div>
           </div>
           
-          <div className="flex gap-2 pt-4 mt-6 border-t">
+          <div className="flex gap-2 pt-4 mt-6 border-t border-gray-200 dark:border-zinc-700">
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -1567,7 +1803,7 @@ function AddTermModal({ appState }) {
             <button
               type="button"
               onClick={() => setIsAddingTerm(false)}
-              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              className="px-4 py-2 bg-gray-300 dark:bg-zinc-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-400 dark:hover:bg-zinc-500 transition-colors"
             >
               Cancel
             </button>

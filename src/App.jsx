@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 // BluWiki: a single-file, bilingual (EN/VI) personal wiki + number base converters
 // - Works fully offline
@@ -1151,7 +1152,8 @@ function TermItem({ t, onSelect }) {
   return (
     <button
       onClick={() => onSelect?.(t)}
-      className="w-full text-left rounded-xl border p-3 hover:bg-gray-50 dark:hover:bg-zinc-800 border-gray-200 dark:border-zinc-800"
+      className="w-full text-left rounded-xl border p-3 hover:bg-gray-50 dark:hover:bg-zinc-800 border-gray-200 dark:border-zinc-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+      aria-label={`View details for ${t.abbr}: ${t.en?.title}`}
     >
       <div className="flex items-center gap-2">
         <span className="text-sm font-bold tracking-wide">{t.abbr}</span>
@@ -1871,16 +1873,92 @@ function App() {
     toggleDarkMode
   };
 
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const [fontSize, setFontSize] = useState(() => {
+    const saved = localStorage.getItem('bluwiki.fontSize');
+    return saved || 'medium';
+  });
+
+  // Handle font size persistence and apply to document
+  useEffect(() => {
+    localStorage.setItem('bluwiki.fontSize', fontSize);
+    document.documentElement.classList.remove('text-sm', 'text-base', 'text-lg', 'text-xl');
+    const sizeClass = {
+      'small': 'text-sm',
+      'medium': 'text-base', 
+      'large': 'text-lg',
+      'extra-large': 'text-xl'
+    }[fontSize];
+    document.documentElement.classList.add(sizeClass);
+  }, [fontSize]);
+
   return (
     <div className={`min-h-screen bg-gray-50 dark:bg-zinc-900 text-gray-900 dark:text-gray-100 ${isPrintMode ? 'print-mode' : ''}`}>
       <Header appState={appState} />
-      <main className="container mx-auto px-4 py-8">
+      <main id="main-content" className="container mx-auto px-4 py-8" role="main">
         <Glossary appState={appState} />
       </main>
       <Footer terms={terms} />
       {showCommandPalette && <CommandPalette appState={appState} />}
       {selectedTerm && <TermModal appState={appState} />}
       {isAddingTerm && <AddTermModal appState={appState} />}
+      
+      {/* Accessibility Controls */}
+      <div className="fixed top-4 right-16 z-50 flex gap-2">
+        {/* Font Size Control */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-600 p-2">
+          <label htmlFor="font-size-select" className="sr-only">Font size</label>
+          <select
+            id="font-size-select"
+            value={fontSize}
+            onChange={(e) => setFontSize(e.target.value)}
+            className="text-xs px-2 py-1 rounded border-0 bg-transparent text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+            aria-label="Change font size"
+          >
+            <option value="small">A</option>
+            <option value="medium">A</option>
+            <option value="large">A</option>
+            <option value="extra-large">A</option>
+          </select>
+        </div>
+      </div>
+      
+      {/* Fixed Dark Mode Toggle */}
+      <button
+        onClick={toggleDarkMode}
+        className="fixed top-4 right-4 z-50 p-3 bg-white dark:bg-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 rounded-full shadow-lg border border-gray-200 dark:border-zinc-600 transition-all duration-300 hover:scale-110 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+        title="Toggle Dark Mode"
+        aria-label={`Switch to ${isDarkMode ? 'light' : 'dark'} mode`}
+      >
+        {isDarkMode ? '☀️' : '🌙'}
+      </button>
+      
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:ring-2 focus:ring-blue-300 focus:outline-none"
+          aria-label="Back to top"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -1890,57 +1968,82 @@ function Header({ appState }) {
   const { searchQuery, setSearchQuery, exportData, importData, setShowCommandPalette, isPrintMode, setIsPrintMode, isDarkMode, toggleDarkMode } = appState;
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-zinc-800 shadow-sm border-b border-gray-200 dark:border-zinc-700">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">BluWiki</h1>
-          
-          <div className="flex-1 max-w-md">
-            <input
-              type="search"
-              placeholder="Search terms... (Press / to focus)"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+    <>
+      {/* Skip to main content link for screen readers */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 z-50 px-4 py-2 bg-blue-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+      >
+        Skip to main content
+      </a>
+      
+      <header className="sticky top-0 z-50 bg-white dark:bg-zinc-800 shadow-sm border-b border-gray-200 dark:border-zinc-700" role="banner">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">BluWiki</h1>
+            
+            <div className="flex-1 max-w-md">
+              <label htmlFor="search-input" className="sr-only">Search terms</label>
+              <input
+                id="search-input"
+                type="search"
+                placeholder="Search terms... (Press / to focus)"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  // Smooth scroll to results when searching
+                  if (e.target.value.trim()) {
+                    setTimeout(() => {
+                      const termsGrid = document.querySelector('.grid.gap-4.md\\:grid-cols-2.lg\\:grid-cols-3');
+                      if (termsGrid) {
+                        termsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }, 100);
+                  }
+                }}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-describedby="search-help"
+              />
+              <div id="search-help" className="sr-only">Search through all terms by abbreviation, title, or definition</div>
+            </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCommandPalette(true)}
-              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
               title="Command Palette (Ctrl/⌘+K)"
+              aria-label="Open command palette"
             >
               ⌘K
             </button>
             
             <button
-              onClick={toggleDarkMode}
-              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
-              title="Toggle Dark Mode"
-            >
-              {isDarkMode ? '☀️' : '🌙'}
-            </button>
-            
-            <button
               onClick={() => setIsPrintMode(!isPrintMode)}
-              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 dark:hover:bg-zinc-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:outline-none"
               title="Toggle Print Mode"
+              aria-label={`${isPrintMode ? 'Exit' : 'Enter'} print mode`}
             >
               🖨️
             </button>
             
             <button
               onClick={exportData}
-              className="px-3 py-2 text-sm bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg transition-colors"
+              className="px-3 py-2 text-sm bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 rounded-lg transition-colors focus:ring-2 focus:ring-blue-300 focus:outline-none"
               title="Export Data"
+              aria-label="Export all terms as JSON file"
             >
               Export
             </button>
             
-            <label className="px-3 py-2 text-sm bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 rounded-lg transition-colors cursor-pointer">
+            <label className="px-3 py-2 text-sm bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 rounded-lg transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-green-300">
               Import
-              <input type="file" accept=".json" onChange={importData} className="hidden" />
+              <input 
+                type="file" 
+                accept=".json" 
+                onChange={importData} 
+                className="hidden" 
+                aria-label="Import terms from JSON file"
+              />
             </label>
           </div>
         </div>
@@ -2026,16 +2129,59 @@ function Glossary({ appState }) {
     setIsAddingTerm 
   } = appState;
 
+  // Multi-select tags state
+  const [activeTags, setActiveTags] = useState([]);
+
+  // Generate consistent colors for tags
+  const getTagColor = (tag) => {
+    const colors = [
+      'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+      'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
+      'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+      'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700',
+      'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700',
+      'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:border-pink-700',
+      'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700',
+      'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-700',
+    ];
+    const hash = tag.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Toggle tag selection
+  const toggleTag = (tag) => {
+    setActiveTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    );
+  };
+
+  // Filter terms by selected tags
+  const filteredTermsWithTags = useMemo(() => {
+    if (activeTags.length === 0) {
+      return filteredTerms;
+    }
+    return filteredTerms.filter(term => 
+      activeTags.every(tag => term.tags?.includes(tag))
+    );
+  }, [filteredTerms, activeTags]);
+
   // Local UI state for large-list UX
-  const [viewMode, setViewMode] = useState('infinite'); // 'infinite' | 'pagination'
+  const [viewMode, setViewMode] = useState('infinite'); // 'infinite' | 'pagination' | 'virtualized'
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(24);
   const [visibleCount, setVisibleCount] = useState(48); // for infinite mode
   const [alpha, setAlpha] = useState('All'); // 'All' | 'A'..'Z' | '#'
   const [sortBy, setSortBy] = useState('abbr'); // 'abbr' | 'en' | 'vi'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const sentinelRef = useRef(null);
+  const parentRef = useRef(null);
 
   // Derive working terms with alpha filter and sorting
   const workingTerms = useMemo(() => {
@@ -2058,7 +2204,7 @@ function Glossary({ appState }) {
       return (t.abbr || '').toLowerCase();
     };
 
-    const items = filteredTerms.filter(passesAlpha).slice().sort((a, b) => {
+    const items = filteredTermsWithTags.filter(passesAlpha).slice().sort((a, b) => {
       const ka = getKey(a);
       const kb = getKey(b);
       if (ka < kb) return sortDir === 'asc' ? -1 : 1;
@@ -2066,13 +2212,21 @@ function Glossary({ appState }) {
       return 0;
     });
     return items;
-  }, [filteredTerms, alpha, sortBy, sortDir]);
+  }, [filteredTermsWithTags, alpha, sortBy, sortDir]);
+
+  // Virtualization setup for large lists <mcreference link="https://borstch.com/blog/development/comparing-tanstack-virtual-with-react-window-which-one-should-you-choose" index="1">1</mcreference>
+  const virtualizer = useVirtualizer({
+    count: workingTerms?.length || 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 200, // Estimated height of each TermCard
+    overscan: 5, // Render 5 extra items outside viewport for smooth scrolling
+  });
 
   // Reset pagination/infinite scrolling when query, tag, alpha change
   useEffect(() => {
     setPage(0);
     setVisibleCount(48);
-  }, [searchQuery, activeTag, alpha]);
+  }, [searchQuery, activeTags, alpha]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -2082,8 +2236,13 @@ function Glossary({ appState }) {
 
     const observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.isIntersecting) {
-          setVisibleCount((n) => Math.min(n + pageSize, workingTerms.length));
+        if (entry.isIntersecting && visibleCount < workingTerms.length && !isLoadingMore) {
+          setIsLoadingMore(true);
+          // Simulate loading delay for better UX
+          setTimeout(() => {
+            setVisibleCount((n) => Math.min(n + pageSize, workingTerms.length));
+            setIsLoadingMore(false);
+          }, 300);
         }
       }
     }, { root: null, rootMargin: '200px 0px', threshold: 0 });
@@ -2093,6 +2252,26 @@ function Glossary({ appState }) {
   }, [viewMode, pageSize, workingTerms.length]);
 
   const total = workingTerms.length;
+
+  // Keyboard shortcuts for pagination
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle shortcuts when not in input/textarea and in pagination mode
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || viewMode !== 'pagination') return;
+      
+      if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPage((p) => Math.max(0, p - 1));
+      } else if (e.key === 'ArrowRight' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const maxPage = Math.ceil(total / pageSize) - 1;
+        setPage((p) => Math.min(maxPage, p + 1));
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode, total, pageSize]);
   const showing = viewMode === 'infinite' ? Math.min(visibleCount, total) : Math.min(total, pageSize);
 
   // Compute items to render based on mode
@@ -2105,7 +2284,7 @@ function Glossary({ appState }) {
     }
   }, [viewMode, workingTerms, visibleCount, page, pageSize]);
 
-  if (filteredTerms.length === 0 && searchQuery.trim()) {
+  if (filteredTermsWithTags.length === 0 && (searchQuery.trim() || activeTags.length > 0)) {
     return (
       <div className="text-center py-12">
         <div className="text-6xl mb-4">🔍</div>
@@ -2154,6 +2333,12 @@ function Glossary({ appState }) {
               >
                 Pages
               </button>
+              <button
+                onClick={() => setViewMode('virtualized')}
+                className={`px-3 py-1.5 text-sm ${viewMode === 'virtualized' ? 'bg-blue-600 text-white' : 'bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300'}`}
+              >
+                Virtual
+              </button>
             </div>
 
             {/* Page size */}
@@ -2195,7 +2380,16 @@ function Glossary({ appState }) {
           {letters.map((ch) => (
             <button
               key={ch}
-              onClick={() => setAlpha(ch)}
+              onClick={() => {
+                setAlpha(ch);
+                // Smooth scroll to terms grid after filter change
+                setTimeout(() => {
+                  const termsGrid = document.querySelector('.grid.gap-4.md\\:grid-cols-2.lg\\:grid-cols-3');
+                  if (termsGrid) {
+                    termsGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }, 100);
+              }}
               className={`px-2 py-1 text-xs rounded ${alpha === ch ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'}`}
             >
               {ch}
@@ -2203,46 +2397,107 @@ function Glossary({ appState }) {
           ))}
         </div>
 
-        {/* Tag Filter */}
+        {/* Tag Filter - Multi-select Chips */}
         {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveTag('')}
-              className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                !activeTag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
-              }`}
-            >
-              All
-            </button>
-            {allTags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
-                className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                  activeTag === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-zinc-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-zinc-600'
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tags:</span>
+              {activeTags.length > 0 && (
+                <button
+                  onClick={() => setActiveTags([])}
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                >
+                  Clear all ({activeTags.length})
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {allTags.map(tag => {
+                const isSelected = activeTags.includes(tag);
+                const colorClasses = getTagColor(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-3 py-1 rounded-full text-sm border transition-all duration-200 ${
+                      isSelected 
+                        ? `${colorClasses} ring-2 ring-blue-500 ring-opacity-50 shadow-md transform scale-105` 
+                        : `${colorClasses} hover:shadow-md hover:scale-105 opacity-70 hover:opacity-100`
+                    }`}
+                  >
+                    {isSelected && <span className="mr-1">✓</span>}
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
       {/* Terms Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {itemsToRender.map(term => (
-          <TermCard
-            key={term.id}
-            term={term}
-            onClick={() => {
-              setSelectedTerm(term);
-              window.location.hash = term.id;
+      {viewMode === 'virtualized' ? (
+        <div
+          ref={parentRef}
+          className="h-[600px] overflow-auto border border-gray-200 dark:border-zinc-700 rounded-lg"
+        >
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
             }}
-            onTagClick={(tag) => setActiveTag(tag)}
-          />
-        ))}
-      </div>
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const term = workingTerms[virtualItem.index];
+              return (
+                <div
+                  key={virtualItem.key}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <div className="p-2">
+                    <TermCard
+                      term={term}
+                      onClick={() => {
+                        setSelectedTerm(term);
+                        window.location.hash = term.id;
+                      }}
+                      onTagClick={(tag) => toggleTag(tag)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {itemsToRender.map(term => (
+            <TermCard
+              key={term.id}
+              term={term}
+              onClick={() => {
+                setSelectedTerm(term);
+                window.location.hash = term.id;
+              }}
+              onTagClick={(tag) => toggleTag(tag)}
+            />
+          ))}
+          {/* Show skeleton cards when loading more */}
+          {isLoadingMore && viewMode === 'infinite' && (
+            Array.from({ length: 3 }).map((_, index) => (
+              <SkeletonCard key={`skeleton-${index}`} />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Load more / sentinel for infinite */}
       {viewMode === 'infinite' && (
@@ -2260,6 +2515,13 @@ function Glossary({ appState }) {
           ) : (
             <div className="text-xs text-gray-500 dark:text-gray-400">End of results</div>
           )}
+        </div>
+      )}
+
+      {/* Virtualized mode info */}
+      {viewMode === 'virtualized' && (
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+          Showing all {total} items with virtualization for optimal performance <mcreference link="https://borstch.com/blog/development/comparing-tanstack-virtual-with-react-window-which-one-should-you-choose" index="1">1</mcreference>
         </div>
       )}
 
@@ -2312,7 +2574,34 @@ function Glossary({ appState }) {
 }
 
 // Term Card component
+function SkeletonCard() {
+  return (
+    <div className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 animate-pulse">
+      <div className="mb-2">
+        <div className="h-6 bg-gray-200 dark:bg-zinc-700 rounded w-16 mb-2"></div>
+        <div className="space-y-1">
+          <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-zinc-700 rounded w-2/3"></div>
+        </div>
+      </div>
+      <div className="space-y-2 mb-3">
+        <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded"></div>
+        <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded"></div>
+        <div className="h-3 bg-gray-200 dark:bg-zinc-700 rounded w-5/6"></div>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        <div className="h-6 bg-gray-200 dark:bg-zinc-700 rounded w-12"></div>
+        <div className="h-6 bg-gray-200 dark:bg-zinc-700 rounded w-16"></div>
+      </div>
+    </div>
+  );
+}
+
 function TermCard({ term, onClick, onTagClick }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const definition = term.en?.def || term.definition;
+  const isLongDefinition = definition && definition.length > 120;
+  
   return (
     <div
       className="bg-white dark:bg-zinc-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-zinc-700 hover:shadow-md dark:hover:shadow-zinc-900/20 transition-shadow cursor-pointer"
@@ -2325,24 +2614,57 @@ function TermCard({ term, onClick, onTagClick }) {
           {term.vi?.title && <div className="italic">{term.vi.title}</div>}
         </div>
       </div>
-      <p className="text-gray-700 dark:text-gray-300 text-sm mb-3 line-clamp-3">
-        {term.en?.def || term.definition}
-      </p>
+      
+      <div className="text-gray-700 dark:text-gray-300 text-sm mb-3">
+        <p className={isLongDefinition && !isExpanded ? 'line-clamp-3' : ''}>
+          {definition}
+        </p>
+        {isLongDefinition && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
+            }}
+            className="text-blue-600 dark:text-blue-400 text-xs mt-1 hover:underline focus:outline-none"
+          >
+            {isExpanded ? 'Ẩn bớt' : 'Hiển thị thêm'}
+          </button>
+        )}
+      </div>
       
       {term.tags && term.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {term.tags.map(tag => (
-            <span
-              key={tag}
-              onClick={(e) => {
-                e.stopPropagation();
-                onTagClick(tag);
-              }}
-              className="px-2 py-1 bg-gray-100 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 text-xs rounded hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors"
-            >
-              {tag}
-            </span>
-          ))}
+          {term.tags.map(tag => {
+            // Generate consistent colors for tags
+            const colors = [
+              'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-700',
+              'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-700',
+              'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-700',
+              'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-700',
+              'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-700',
+              'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900 dark:text-pink-200 dark:border-pink-700',
+              'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700',
+              'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-700',
+            ];
+            const hash = tag.split('').reduce((a, b) => {
+              a = ((a << 5) - a) + b.charCodeAt(0);
+              return a & a;
+            }, 0);
+            const colorClasses = colors[Math.abs(hash) % colors.length];
+            
+            return (
+              <span
+                key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTagClick(tag);
+                }}
+                className={`px-2 py-1 text-xs rounded border cursor-pointer transition-all duration-200 hover:shadow-sm hover:scale-105 ${colorClasses}`}
+              >
+                {tag}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>
@@ -2363,6 +2685,30 @@ function TermModal({ appState }) {
     viExample: selectedTerm?.vi?.example || '',
     tags: selectedTerm?.tags?.join(', ') || ''
   });
+  
+  const modalRef = useRef(null);
+  const closeButtonRef = useRef(null);
+  
+  // Focus management
+  useEffect(() => {
+    if (selectedTerm && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [selectedTerm]);
+  
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedTerm(null);
+      }
+    };
+    
+    if (selectedTerm) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [selectedTerm, setSelectedTerm]);
 
   const handleSave = () => {
     updateTerm(selectedTerm.id, {
@@ -2385,8 +2731,18 @@ function TermModal({ appState }) {
   if (!selectedTerm) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      onClick={(e) => e.target === e.currentTarget && setSelectedTerm(null)}
+    >
+      <div 
+        ref={modalRef}
+        className="bg-white dark:bg-zinc-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex-1">
@@ -2394,18 +2750,21 @@ function TermModal({ appState }) {
                 <input
                   value={editForm.abbr}
                   onChange={(e) => setEditForm(prev => ({ ...prev, abbr: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 text-2xl font-bold"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 text-2xl font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   placeholder="Abbreviation"
+                  aria-label="Term abbreviation"
                 />
               ) : (
-                <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">{selectedTerm.abbr}</h2>
+                <h2 id="modal-title" className="text-2xl font-bold text-blue-600 dark:text-blue-400">{selectedTerm.abbr}</h2>
               )}
             </div>
             <button
+              ref={closeButtonRef}
               onClick={() => setSelectedTerm(null)}
-              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl ml-4"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl ml-4 focus:ring-2 focus:ring-blue-500 focus:outline-none rounded"
+              aria-label="Close modal"
             >
-              ×
+              <span aria-hidden="true">×</span>
             </button>
           </div>
           
@@ -2421,8 +2780,9 @@ function TermModal({ appState }) {
                   <input
                     value={editForm.enTitle}
                     onChange={(e) => setEditForm(prev => ({ ...prev, enTitle: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     placeholder="English title"
+                    aria-label="English title"
                   />
                 ) : (
                   <p className="text-gray-700 dark:text-gray-300 font-medium">{selectedTerm.en?.title}</p>
@@ -2434,8 +2794,9 @@ function TermModal({ appState }) {
                   <textarea
                     value={editForm.enDef}
                     onChange={(e) => setEditForm(prev => ({ ...prev, enDef: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-24 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 rounded-lg h-24 bg-white dark:bg-zinc-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     placeholder="English definition"
+                    aria-label="English definition"
                   />
                 ) : (
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{selectedTerm.en?.def}</p>
